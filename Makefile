@@ -15,3 +15,4 @@ ftest   :; forge test
 clean  :; forge clean
 snapshot :; forge snapshot
 fmt    :; forge fmt && forge fmt test/
+coverage :; forge coverage --report lcov

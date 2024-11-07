@@ -15,4 +15,5 @@ ftest   :; forge test
 clean  :; forge clean
 snapshot :; forge snapshot
 fmt    :; forge fmt && forge fmt test/
+test-vvv :; forge test --match-test testFuzz_ClaimTokens_DifferentAmounts -vvv
 coverage :; forge coverage --report lcov

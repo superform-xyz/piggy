@@ -14,6 +14,7 @@ contract PiggyBank is ERC20, Ownable {
     event MerkleRootSet(bytes32 merkleRoot);
     event MerkleRootLocked();
     event TokensClaimed(address indexed user, uint256 amount);
+    event TokensBurned(uint256 amount);
 
     constructor() Ownable(msg.sender) ERC20("PIGGY", "BANK") {
         _mint(address(this), TOTAL_SUPPLY);
@@ -46,6 +47,8 @@ contract PiggyBank is ERC20, Ownable {
      * @param merkleProof The Merkle proof that verifies the user and amount are in the Merkle tree.
      */
     function claimTokens(address user, uint256 amount, bytes32[] calldata merkleProof) external {
+        require(user != address(0), "Invalid user address");
+        require(merkleRoot != bytes32(0), "Merkle root is not set");
         require(!hasClaimed[user], "Tokens already claimed for this address");
         bytes32 leaf = keccak256(abi.encodePacked(user, amount));
         require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid Merkle proof");
@@ -80,5 +83,6 @@ contract PiggyBank is ERC20, Ownable {
         require(isMerkleRootLocked, "Cannot burn until Merkle root is locked");
         uint256 remainingBalance = balanceOf(address(this));
         _burn(address(this), remainingBalance);
+        emit TokensBurned(remainingBalance);
     }
 }

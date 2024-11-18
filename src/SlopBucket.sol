@@ -27,6 +27,7 @@ contract SlopBucket is Ownable {
 
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
+    event ClaimRewards(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
     constructor(
@@ -122,6 +123,19 @@ contract SlopBucket is Ownable {
 
         user.rewardDebt = (user.amount * pool.accPiggyPerShare) / 1e12;
         emit Withdraw(msg.sender, _amount);
+    }
+
+    // Claim only PIGGY rewards
+    function claimRewards() external {
+        UserInfo storage user = userInfo[msg.sender];
+        updatePool();
+
+        uint256 pending = (user.amount * pool.accPiggyPerShare) / 1e12 - user.rewardDebt;
+        require(pending > 0, "No rewards to claim");
+
+        piggy.transfer(msg.sender, pending);
+        user.rewardDebt = (user.amount * pool.accPiggyPerShare) / 1e12;
+        emit ClaimRewards(msg.sender, pending);
     }
 
     // Emergency withdraw without rewards

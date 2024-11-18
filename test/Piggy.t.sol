@@ -2,11 +2,11 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
-import "../src/PiggyBank.sol";
+import "../src/Piggy.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract PiggyBankTest is Test {
-    PiggyBank public piggyBank;
+contract PiggyTest is Test {
+    Piggy public piggy;
     address public owner;
     address public user1;
     address public user2;
@@ -23,7 +23,7 @@ contract PiggyBankTest is Test {
         user2 = address(0x2);
 
         // Deploy contract
-        piggyBank = new PiggyBank();
+        piggy = new Piggy();
 
         // Create Merkle tree data
         // In real scenario, you would generate this off-chain
@@ -39,113 +39,113 @@ contract PiggyBankTest is Test {
         merkleProof2[0] = leaf1;
 
         // Set merkle root
-        piggyBank.setMerkleRoot(merkleRoot);
+        piggy.setMerkleRoot(merkleRoot);
     }
 
     // Test Constructor
     function test_Constructor() public {
-        assertEq(piggyBank.name(), "PIGGY");
-        assertEq(piggyBank.symbol(), "BANK");
-        assertEq(piggyBank.TOTAL_SUPPLY(), 1_000_000_000 * 10 ** 18);
-        assertEq(piggyBank.balanceOf(address(piggyBank)), piggyBank.TOTAL_SUPPLY());
+        assertEq(piggy.name(), "PIGGY");
+        assertEq(piggy.symbol(), "PIGGY");
+        assertEq(piggy.TOTAL_SUPPLY(), 69_000_000_000 * 10 ** 18);
+        assertEq(piggy.balanceOf(address(piggy)), piggy.TOTAL_SUPPLY());
     }
 
     // Test Merkle Root Management
     function test_SetMerkleRoot() public {
         bytes32 newRoot = bytes32(uint256(1));
-        piggyBank.setMerkleRoot(newRoot);
-        assertEq(piggyBank.merkleRoot(), newRoot);
+        piggy.setMerkleRoot(newRoot);
+        assertEq(piggy.merkleRoot(), newRoot);
     }
 
     function testFail_SetMerkleRoot_WhenLocked() public {
-        piggyBank.lockMerkleRoot();
-        piggyBank.setMerkleRoot(bytes32(uint256(1)));
+        piggy.lockMerkleRoot();
+        piggy.setMerkleRoot(bytes32(uint256(1)));
     }
 
     function test_LockMerkleRoot() public {
-        piggyBank.lockMerkleRoot();
-        assertTrue(piggyBank.isMerkleRootLocked());
+        piggy.lockMerkleRoot();
+        assertTrue(piggy.isMerkleRootLocked());
     }
 
     // Test Claim Eligibility
     function test_IsEligibleForClaim() public {
-        assertTrue(piggyBank.isEligibleForClaim(user1, CLAIM_AMOUNT, merkleProof1));
+        assertTrue(piggy.isEligibleForClaim(user1, CLAIM_AMOUNT, merkleProof1));
     }
 
     function test_IsNotEligibleForClaim_WrongAmount() public {
-        assertFalse(piggyBank.isEligibleForClaim(user1, CLAIM_AMOUNT + 1, merkleProof1));
+        assertFalse(piggy.isEligibleForClaim(user1, CLAIM_AMOUNT + 1, merkleProof1));
     }
 
     function test_IsNotEligibleForClaim_AfterClaiming() public {
         vm.prank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
-        assertFalse(piggyBank.isEligibleForClaim(user1, CLAIM_AMOUNT, merkleProof1));
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        assertFalse(piggy.isEligibleForClaim(user1, CLAIM_AMOUNT, merkleProof1));
     }
 
     // Test Token Claims
     function test_ClaimTokens() public {
         vm.prank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
-        assertEq(piggyBank.balanceOf(user1), CLAIM_AMOUNT);
-        assertTrue(piggyBank.hasClaimed(user1));
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
+        assertTrue(piggy.hasClaimed(user1));
     }
 
     function testFail_ClaimTokens_DoubleClaim() public {
         vm.startPrank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
     }
 
     function testFail_ClaimTokens_InvalidProof() public {
         vm.prank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof2);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof2);
     }
 
     function testFail_ClaimTokens_ZeroAddress() public {
         vm.prank(user1);
-        piggyBank.claimTokens(address(0), CLAIM_AMOUNT, merkleProof1);
+        piggy.claimTokens(address(0), CLAIM_AMOUNT, merkleProof1);
     }
 
     function testFail_ClaimTokens_MerkleRootNotSet() public {
         // Deploy a new contract instance without setting merkle root
-        PiggyBank newPiggyBank = new PiggyBank();
+        Piggy newPiggy = new Piggy();
 
         vm.prank(user1);
-        newPiggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        newPiggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
     }
 
     // Test Burn Functionality
     function test_BurnUnclaimedTokens() public {
-        piggyBank.lockMerkleRoot();
-        uint256 initialSupply = piggyBank.totalSupply();
-        piggyBank.burnUnclaimedTokens();
-        assertEq(piggyBank.totalSupply(), 0);
+        piggy.lockMerkleRoot();
+        uint256 initialSupply = piggy.totalSupply();
+        piggy.burnUnclaimedTokens();
+        assertEq(piggy.totalSupply(), 0);
     }
 
     function testFail_BurnUnclaimedTokens_WhenNotLocked() public {
-        piggyBank.burnUnclaimedTokens();
+        piggy.burnUnclaimedTokens();
     }
 
     // Test Race Condition Scenario
     function test_ClaimAndBurnRaceCondition() public {
         // Simulate a scenario where claiming and burning happen in close succession
-        piggyBank.lockMerkleRoot();
+        piggy.lockMerkleRoot();
 
         // User1 claims tokens
         vm.prank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
 
         // Owner burns unclaimed tokens
-        piggyBank.burnUnclaimedTokens();
+        piggy.burnUnclaimedTokens();
 
         // Verify user1 still has their tokens
-        assertEq(piggyBank.balanceOf(user1), CLAIM_AMOUNT);
+        assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
     }
 
     // Fuzz Tests
     function testFuzz_ClaimTokens_DifferentAmounts(uint256 amount) public {
         // Bound amount to reasonable values and avoid overflow
-        amount = bound(amount, 1, piggyBank.TOTAL_SUPPLY());
+        amount = bound(amount, 1, piggy.TOTAL_SUPPLY());
 
         // Create new merkle tree with fuzzed amount
         bytes32 leaf1 = keccak256(abi.encodePacked(user1, amount));
@@ -163,42 +163,42 @@ contract PiggyBankTest is Test {
         bytes32[] memory newProof1 = new bytes32[](1);
         newProof1[0] = (leaves[0] == leaf1) ? leaves[1] : leaves[0];
 
-        piggyBank.setMerkleRoot(newRoot);
+        piggy.setMerkleRoot(newRoot);
 
         vm.prank(user1);
-        piggyBank.claimTokens(user1, amount, newProof1);
-        assertEq(piggyBank.balanceOf(user1), amount);
+        piggy.claimTokens(user1, amount, newProof1);
+        assertEq(piggy.balanceOf(user1), amount);
     }
 
     // Integration Tests
     function test_CompleteLifecycle() public {
         // 1. Initial state checks
-        assertEq(piggyBank.balanceOf(address(piggyBank)), piggyBank.TOTAL_SUPPLY());
-        assertFalse(piggyBank.isMerkleRootLocked());
+        assertEq(piggy.balanceOf(address(piggy)), piggy.TOTAL_SUPPLY());
+        assertFalse(piggy.isMerkleRootLocked());
 
         // 2. Multiple users claim
         vm.prank(user1);
-        piggyBank.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
 
         vm.prank(user2);
-        piggyBank.claimTokens(user2, CLAIM_AMOUNT, merkleProof2);
+        piggy.claimTokens(user2, CLAIM_AMOUNT, merkleProof2);
 
         // 3. Verify claims
-        assertEq(piggyBank.balanceOf(user1), CLAIM_AMOUNT);
-        assertEq(piggyBank.balanceOf(user2), CLAIM_AMOUNT);
+        assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
+        assertEq(piggy.balanceOf(user2), CLAIM_AMOUNT);
 
         // 4. Lock merkle root
-        piggyBank.lockMerkleRoot();
-        assertTrue(piggyBank.isMerkleRootLocked());
+        piggy.lockMerkleRoot();
+        assertTrue(piggy.isMerkleRootLocked());
 
         // 5. Burn unclaimed tokens
         uint256 expectedRemaining = CLAIM_AMOUNT * 2; // Amount claimed by user1 and user2
-        piggyBank.burnUnclaimedTokens();
+        piggy.burnUnclaimedTokens();
 
         // 6. Final state checks
-        assertEq(piggyBank.totalSupply(), expectedRemaining);
-        assertEq(piggyBank.balanceOf(user1), CLAIM_AMOUNT);
-        assertEq(piggyBank.balanceOf(user2), CLAIM_AMOUNT);
-        assertEq(piggyBank.balanceOf(address(piggyBank)), 0);
+        assertEq(piggy.totalSupply(), expectedRemaining);
+        assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
+        assertEq(piggy.balanceOf(user2), CLAIM_AMOUNT);
+        assertEq(piggy.balanceOf(address(piggy)), 0);
     }
 }

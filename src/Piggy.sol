@@ -5,10 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract PiggyBank is ERC20, Ownable {
+contract Piggy is ERC20, Ownable {
     bytes32 public merkleRoot;
     bool public isMerkleRootLocked;
-    uint256 public constant TOTAL_SUPPLY = 1_000_000_000 * 10 ** 18;
+    uint256 public constant TOTAL_SUPPLY = 69_000_000_000 * 10 ** 18;
     mapping(address => bool) public hasClaimed;
 
     event MerkleRootSet(bytes32 merkleRoot);
@@ -16,7 +16,7 @@ contract PiggyBank is ERC20, Ownable {
     event TokensClaimed(address indexed user, uint256 amount);
     event TokensBurned(uint256 amount);
 
-    constructor() Ownable(msg.sender) ERC20("PIGGY", "BANK") {
+    constructor() Ownable(msg.sender) ERC20("PIGGY", "PIGGY") {
         _mint(address(this), TOTAL_SUPPLY);
     }
 

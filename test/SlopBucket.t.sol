@@ -156,41 +156,41 @@ contract SlopBucketTest is Test {
     }
 
     function test_ClaimRewards() public {
-    // User1 deposits LP tokens
-    vm.startPrank(user1);
-    lpToken.approve(address(slopBucket), LP_SUPPLY);
-    slopBucket.deposit(500 * 10 ** 18); // Deposit 500 LP tokens
-    vm.stopPrank();
+        // User1 deposits LP tokens
+        vm.startPrank(user1);
+        lpToken.approve(address(slopBucket), LP_SUPPLY);
+        slopBucket.deposit(500 * 10 ** 18); // Deposit 500 LP tokens
+        vm.stopPrank();
 
-    // Move blocks to accumulate rewards
-    vm.roll(START_BLOCK + 10);
+        // Move blocks to accumulate rewards
+        vm.roll(START_BLOCK + 10);
 
-    // User1 claims rewards
-    vm.startPrank(user1);
-    uint256 pendingRewards = slopBucket.pendingRewards(user1);
-    assertGt(pendingRewards, 0, "Rewards should be greater than 0");
+        // User1 claims rewards
+        vm.startPrank(user1);
+        uint256 pendingRewards = slopBucket.pendingRewards(user1);
+        assertGt(pendingRewards, 0, "Rewards should be greater than 0");
 
-    uint256 piggyBalanceBefore = piggy.balanceOf(user1);
-    slopBucket.claimRewards();
-    uint256 piggyBalanceAfter = piggy.balanceOf(user1);
+        uint256 piggyBalanceBefore = piggy.balanceOf(user1);
+        slopBucket.claimRewards();
+        uint256 piggyBalanceAfter = piggy.balanceOf(user1);
 
-    // Verify rewards are received
-    assertEq(piggyBalanceAfter - piggyBalanceBefore, pendingRewards, "Claimed rewards should match pending rewards");
+        // Verify rewards are received
+        assertEq(piggyBalanceAfter - piggyBalanceBefore, pendingRewards, "Claimed rewards should match pending rewards");
 
-    // Destructure PoolInfo to get accPiggyPerShare
-    (, , , uint256 accPiggyPerShare) = slopBucket.pool();
+        // Destructure PoolInfo to get accPiggyPerShare
+        (, , , uint256 accPiggyPerShare) = slopBucket.pool();
 
-    // Destructure UserInfo to get rewardDebt
-    (, uint256 rewardDebt) = slopBucket.userInfo(user1);
+        // Destructure UserInfo to get rewardDebt
+        (, uint256 rewardDebt) = slopBucket.userInfo(user1);
 
-    // Verify rewardDebt is updated
-    uint256 expectedRewardDebt = (500 * 10 ** 18 * accPiggyPerShare) / 1e12;
-    assertEq(rewardDebt, expectedRewardDebt, "Reward debt should be updated correctly");
-    vm.stopPrank();
+        // Verify rewardDebt is updated
+        uint256 expectedRewardDebt = (500 * 10 ** 18 * accPiggyPerShare) / 1e12;
+        assertEq(rewardDebt, expectedRewardDebt, "Reward debt should be updated correctly");
+        vm.stopPrank();
 
-    // Verify LP balance remains the same
-    assertEq(lpToken.balanceOf(user1), LP_SUPPLY - 500 * 10 ** 18, "LP balance should remain unchanged");
-}
+        // Verify LP balance remains the same
+        assertEq(lpToken.balanceOf(user1), LP_SUPPLY - 500 * 10 ** 18, "LP balance should remain unchanged");
+    }
 
 
     function test_ClaimRewards_NoPendingRewards() public {

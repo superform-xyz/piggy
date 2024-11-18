@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-contract MasterChef is Ownable {
+contract SlopBucket is Ownable {
     struct UserInfo {
         uint256 amount; // How many LP tokens the user has staked
         uint256 rewardDebt; // Reward debt

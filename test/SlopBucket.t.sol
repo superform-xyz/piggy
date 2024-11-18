@@ -2,7 +2,7 @@
 pragma solidity ^0.8.28;
 
 import "forge-std/Test.sol";
-import "../src/MasterChef.sol";
+import "../src/SlopBucket.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract PiggyToken is ERC20 {
@@ -13,10 +13,10 @@ contract LPToken is ERC20 {
     constructor() ERC20("LP Token", "LPT") {}
 }
 
-contract MasterChefTest is Test {
+contract SlopBucketTest is Test {
     ERC20 public piggy;
     ERC20 public lpToken;
-    MasterChef public masterChef;
+    SlopBucket public slopBucket;
 
     address public owner;
     address public user1;
@@ -36,22 +36,22 @@ contract MasterChefTest is Test {
         piggy = new PiggyToken();
         lpToken = new LPToken();
 
-        // Deploy MasterChef contract
-        masterChef = new MasterChef(IERC20(address(piggy)), IERC20(address(lpToken)), PIGGY_PER_BLOCK, START_BLOCK);
+        // Deploy SlopBucket contract
+        slopBucket = new SlopBucket(IERC20(address(piggy)), IERC20(address(lpToken)), PIGGY_PER_BLOCK, START_BLOCK);
 
         // Mint tokens and set up initial balances
         deal(address(piggy), owner, TOTAL_SUPPLY);
         deal(address(lpToken), user1, 1_000 * 10 ** 18);
         deal(address(lpToken), user2, 1_000 * 10 ** 18);
 
-        // Transfer rewards to MasterChef
-        piggy.transfer(address(masterChef), REWARD_SUPPLY);
+        // Transfer rewards to SlopBucket
+        piggy.transfer(address(slopBucket), REWARD_SUPPLY);
     }
 
     function test_Constructor() public {
-        assertEq(address(masterChef.piggy()), address(piggy));
-        assertEq(masterChef.piggyPerBlock(), PIGGY_PER_BLOCK);
-        assertEq(masterChef.startBlock(), START_BLOCK);
+        assertEq(address(slopBucket.piggy()), address(piggy));
+        assertEq(slopBucket.piggyPerBlock(), PIGGY_PER_BLOCK);
+        assertEq(slopBucket.startBlock(), START_BLOCK);
     }
 
     function test_DepositAndRewards() public {
@@ -59,20 +59,20 @@ contract MasterChefTest is Test {
 
         // User1 deposits LP tokens
         vm.startPrank(user1);
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
         vm.stopPrank();
 
         // Simulate some blocks passing
         vm.roll(START_BLOCK + 100);
 
         // Check rewards for User1
-        uint256 pendingReward = masterChef.pendingRewards(user1);
+        uint256 pendingReward = slopBucket.pendingRewards(user1);
         assertGt(pendingReward, 0);
 
         // User1 withdraws LP tokens and claims rewards
         vm.startPrank(user1);
-        masterChef.withdraw(500 * 10 ** 18);
+        slopBucket.withdraw(500 * 10 ** 18);
         vm.stopPrank();
 
         assertEq(lpToken.balanceOf(user1), 1_000 * 10 ** 18); // LP balance restored
@@ -84,8 +84,8 @@ contract MasterChefTest is Test {
 
         // User1 deposits LP tokens
         vm.startPrank(user1);
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
         vm.stopPrank();
 
         // Simulate some blocks
@@ -93,16 +93,16 @@ contract MasterChefTest is Test {
 
         // User2 deposits LP tokens
         vm.startPrank(user2);
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
         vm.stopPrank();
 
         // Simulate additional blocks
         vm.roll(START_BLOCK + 100);
 
         // Check rewards
-        uint256 rewardUser1 = masterChef.pendingRewards(user1);
-        uint256 rewardUser2 = masterChef.pendingRewards(user2);
+        uint256 rewardUser1 = slopBucket.pendingRewards(user1);
+        uint256 rewardUser2 = slopBucket.pendingRewards(user2);
 
         assertGt(rewardUser1, rewardUser2); // User1 has more rewards as they deposited earlier
     }
@@ -111,11 +111,11 @@ contract MasterChefTest is Test {
         vm.startPrank(user1);
 
         // User1 deposits LP tokens
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
 
         // User1 calls emergencyWithdraw
-        masterChef.emergencyWithdraw();
+        slopBucket.emergencyWithdraw();
 
         // Verify LP tokens are returned without rewards
         assertEq(lpToken.balanceOf(user1), 1_000 * 10 ** 18);
@@ -128,11 +128,11 @@ contract MasterChefTest is Test {
         vm.startPrank(user1);
 
         // User1 deposits LP tokens
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
 
         // Attempt to withdraw more than deposited
-        masterChef.withdraw(600 * 10 ** 18);
+        slopBucket.withdraw(600 * 10 ** 18);
 
         vm.stopPrank();
     }
@@ -142,15 +142,15 @@ contract MasterChefTest is Test {
 
         // User1 deposits LP tokens
         vm.startPrank(user1);
-        lpToken.approve(address(masterChef), 500 * 10 ** 18);
-        masterChef.deposit(500 * 10 ** 18);
+        lpToken.approve(address(slopBucket), 500 * 10 ** 18);
+        slopBucket.deposit(500 * 10 ** 18);
         vm.stopPrank();
 
         // Simulate some blocks passing
         vm.roll(START_BLOCK + 50);
 
         // Check pending rewards
-        uint256 pendingReward = masterChef.pendingRewards(user1);
+        uint256 pendingReward = slopBucket.pendingRewards(user1);
         assertGt(pendingReward, 0);
     }
 }

@@ -9,12 +9,15 @@ contract Piggy is ERC20, Ownable {
     bytes32 public merkleRoot;
     bool public isMerkleRootLocked;
     uint256 public constant TOTAL_SUPPLY = 69_000_000_000 * 10 ** 18;
+    bool public hasSentToSlopBucket = false; 
+    uint256 public constant SLOP_BUCKET_ALLOCATION = 6_900_000_000 * 10 ** 18;
     mapping(address => bool) public hasClaimed;
 
     event MerkleRootSet(bytes32 merkleRoot);
     event MerkleRootLocked();
     event TokensClaimed(address indexed user, uint256 amount);
     event TokensBurned(uint256 amount);
+    event SlopBucketTokensSent(address indexed slopBucket, uint256 amount);
 
     constructor() Ownable(msg.sender) ERC20("PIGGY", "PIGGY") {
         _mint(address(this), TOTAL_SUPPLY);
@@ -81,8 +84,21 @@ contract Piggy is ERC20, Ownable {
      */
     function burnUnclaimedTokens() external onlyOwner {
         require(isMerkleRootLocked, "Cannot burn until Merkle root is locked");
+        require(hasSentToSlopBucket, "Cannot burn unless SlopBucket has received tokens");
         uint256 remainingBalance = balanceOf(address(this));
         _burn(address(this), remainingBalance);
         emit TokensBurned(remainingBalance);
+    }
+
+    /**
+     * @dev Sends slop bucket allocation to the SlopBucket.
+     * @param slopBucketAddress The address of the SlopBucket contract.
+     */
+    function sendToSlopBucket(address slopBucketAddress) external onlyOwner {
+        require(!hasSentToSlopBucket, "Tokens already sent to SlopBucket");
+        require(slopBucketAddress != address(0), "Invalid SlopBucket address");
+        hasSentToSlopBucket = true;
+        _transfer(address(this), slopBucketAddress, SLOP_BUCKET_ALLOCATION); 
+        emit SlopBucketTokensSent(slopBucketAddress, SLOP_BUCKET_ALLOCATION);
     }
 }

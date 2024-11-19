@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0
 pragma solidity ^0.8.13;
 
-import {CREATE3Factory} from "create3-factory/src/CREATE3Factory.sol";
+import { CREATE3Factory } from "create3-factory/src/CREATE3Factory.sol";
 
 import "forge-std/Script.sol";
 
@@ -32,7 +32,10 @@ abstract contract CREATE3Script is Script {
         return keccak256(bytes(string.concat(name, "-v", version)));
     }
 
-    function getCreate3ContractSalt(string memory name, string memory _version)
+    function getCreate3ContractSalt(
+        string memory name,
+        string memory _version
+    )
         internal
         view
         virtual

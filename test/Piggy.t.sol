@@ -44,7 +44,7 @@ contract PiggyTest is Test {
     }
 
     // Test Constructor
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertEq(piggy.name(), "PIGGY");
         assertEq(piggy.symbol(), "PIGGY");
         assertEq(piggy.TOTAL_SUPPLY(), 69_000_000_000 * 10 ** 18);
@@ -54,25 +54,21 @@ contract PiggyTest is Test {
     // Test SlopBucket Allocation
     function test_SendToSlopBucket() public {
         uint256 initialContractBalance = piggy.balanceOf(address(piggy));
-        uint256 initialSlopBucketBalance = piggy.balanceOf(slopBucket);
 
         // Call sendToSlopBucket
         piggy.sendToSlopBucket(slopBucket);
 
         // Verify balances after transfer
         assertEq(piggy.balanceOf(slopBucket), SLOP_BUCKET_ALLOCATION);
-        assertEq(
-            piggy.balanceOf(address(piggy)),
-            initialContractBalance - SLOP_BUCKET_ALLOCATION
-        );
+        assertEq(piggy.balanceOf(address(piggy)), initialContractBalance - SLOP_BUCKET_ALLOCATION);
 
         // Verify the function can't be called again
-        vm.expectRevert("Tokens already sent to SlopBucket");
+        vm.expectRevert(Piggy.TOKENS_ALREADY_SENT_TO_SLOPE_BUCKET.selector);
         piggy.sendToSlopBucket(slopBucket);
     }
 
     function test_Revert_SendToSlopBucket_InvalidAddress() public {
-        vm.expectRevert("Invalid SlopBucket address");
+        vm.expectRevert(Piggy.INVALID_SLOPE_BUCKET_ADDRESS.selector);
         piggy.sendToSlopBucket(address(0));
     }
 
@@ -94,11 +90,11 @@ contract PiggyTest is Test {
     }
 
     // Test Claim Eligibility
-    function test_IsEligibleForClaim() public {
+    function test_IsEligibleForClaim() public view {
         assertTrue(piggy.isEligibleForClaim(user1, CLAIM_AMOUNT, merkleProof1));
     }
 
-    function test_IsNotEligibleForClaim_WrongAmount() public {
+    function test_IsNotEligibleForClaim_WrongAmount() public view {
         assertFalse(piggy.isEligibleForClaim(user1, CLAIM_AMOUNT + 1, merkleProof1));
     }
 
@@ -142,7 +138,6 @@ contract PiggyTest is Test {
     function test_BurnUnclaimedTokens() public {
         piggy.lockMerkleRoot();
         piggy.sendToSlopBucket(slopBucket);
-        uint256 initialSupply = piggy.totalSupply();
         piggy.burnUnclaimedTokens();
         assertEq(piggy.balanceOf(address(piggy)), 0);
     }
@@ -154,7 +149,8 @@ contract PiggyTest is Test {
     // Test Complete Lifecycle with SlopBucket
     function test_CompleteLifecycleWithSlopBucket() public {
         // 1. Initial state checks
-        assertEq(piggy.balanceOf(address(piggy)), piggy.TOTAL_SUPPLY());
+        uint256 totalSupply = piggy.TOTAL_SUPPLY();
+        assertEq(piggy.balanceOf(address(piggy)), totalSupply);
 
         // 2. Send to SlopBucket
         piggy.sendToSlopBucket(slopBucket);
@@ -176,7 +172,8 @@ contract PiggyTest is Test {
         assertTrue(piggy.isMerkleRootLocked());
 
         // 6. Burn unclaimed tokens
-        uint256 expectedRemaining = CLAIM_AMOUNT * 2; // Amount claimed by user1 and user2
+        uint256 expectedRemaining = CLAIM_AMOUNT + CLAIM_AMOUNT + SLOP_BUCKET_ALLOCATION; // Amount claimed by user1 and
+            // user2 + slop bucket allocation
         piggy.burnUnclaimedTokens();
 
         // 7. Final state checks

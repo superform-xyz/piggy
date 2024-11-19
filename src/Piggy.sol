@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
-import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+// external
+import { ERC20 } from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+import { MerkleProof } from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
 contract Piggy is ERC20, Ownable {
     bytes32 public merkleRoot;
     bool public isMerkleRootLocked;
     uint256 public constant TOTAL_SUPPLY = 69_000_000_000 * 10 ** 18;
-    bool public hasSentToSlopBucket = false; 
+    bool public hasSentToSlopBucket = false;
     uint256 public constant SLOP_BUCKET_ALLOCATION = 6_900_000_000 * 10 ** 18;
     mapping(address => bool) public hasClaimed;
 
@@ -18,6 +19,16 @@ contract Piggy is ERC20, Ownable {
     event TokensClaimed(address indexed user, uint256 amount);
     event TokensBurned(uint256 amount);
     event SlopBucketTokensSent(address indexed slopBucket, uint256 amount);
+
+    error MERKLE_ROOT_LOCKED();
+    error MERKLE_ROOT_NOT_SET();
+    error INVALID_USER_ADDRESS();
+    error INVALID_MERKLE_PROOF();
+    error TOKENS_ALREADY_CLAIMED();
+    error INVALID_SLOPE_BUCKET_ADDRESS();
+    error TOKENS_ALREADY_SENT_TO_SLOPE_BUCKET();
+    error CANNOT_BURN_UNTIL_MERKLE_ROOT_IS_LOCKED();
+    error CANNOT_BURN_UNLESS_SLOPE_BUCKET_HAS_RECEIVED_TOKENS();
 
     constructor() Ownable(msg.sender) ERC20("PIGGY", "PIGGY") {
         _mint(address(this), TOTAL_SUPPLY);
@@ -50,11 +61,11 @@ contract Piggy is ERC20, Ownable {
      * @param merkleProof The Merkle proof that verifies the user and amount are in the Merkle tree.
      */
     function claimTokens(address user, uint256 amount, bytes32[] calldata merkleProof) external {
-        require(user != address(0), "Invalid user address");
-        require(merkleRoot != bytes32(0), "Merkle root is not set");
-        require(!hasClaimed[user], "Tokens already claimed for this address");
+        require(user != address(0), INVALID_USER_ADDRESS());
+        require(merkleRoot != bytes32(0), MERKLE_ROOT_NOT_SET());
+        require(!hasClaimed[user], TOKENS_ALREADY_CLAIMED());
         bytes32 leaf = keccak256(abi.encodePacked(user, amount));
-        require(MerkleProof.verify(merkleProof, merkleRoot, leaf), "Invalid Merkle proof");
+        require(MerkleProof.verify(merkleProof, merkleRoot, leaf), INVALID_MERKLE_PROOF());
         hasClaimed[user] = true;
         _transfer(address(this), user, amount);
         emit TokensClaimed(user, amount);
@@ -65,7 +76,7 @@ contract Piggy is ERC20, Ownable {
      * @param _merkleRoot The Merkle root to set.
      */
     function setMerkleRoot(bytes32 _merkleRoot) external onlyOwner {
-        require(!isMerkleRootLocked, "Merkle root is locked and cannot be updated");
+        require(!isMerkleRootLocked, MERKLE_ROOT_LOCKED());
         merkleRoot = _merkleRoot;
         emit MerkleRootSet(_merkleRoot);
     }
@@ -83,8 +94,8 @@ contract Piggy is ERC20, Ownable {
      * This function can only be called if the Merkle root is locked.
      */
     function burnUnclaimedTokens() external onlyOwner {
-        require(isMerkleRootLocked, "Cannot burn until Merkle root is locked");
-        require(hasSentToSlopBucket, "Cannot burn unless SlopBucket has received tokens");
+        require(isMerkleRootLocked, CANNOT_BURN_UNTIL_MERKLE_ROOT_IS_LOCKED());
+        require(hasSentToSlopBucket, CANNOT_BURN_UNLESS_SLOPE_BUCKET_HAS_RECEIVED_TOKENS());
         uint256 remainingBalance = balanceOf(address(this));
         _burn(address(this), remainingBalance);
         emit TokensBurned(remainingBalance);
@@ -95,10 +106,10 @@ contract Piggy is ERC20, Ownable {
      * @param slopBucketAddress The address of the SlopBucket contract.
      */
     function sendToSlopBucket(address slopBucketAddress) external onlyOwner {
-        require(!hasSentToSlopBucket, "Tokens already sent to SlopBucket");
-        require(slopBucketAddress != address(0), "Invalid SlopBucket address");
+        require(!hasSentToSlopBucket, TOKENS_ALREADY_SENT_TO_SLOPE_BUCKET());
+        require(slopBucketAddress != address(0), INVALID_SLOPE_BUCKET_ADDRESS());
         hasSentToSlopBucket = true;
-        _transfer(address(this), slopBucketAddress, SLOP_BUCKET_ALLOCATION); 
+        _transfer(address(this), slopBucketAddress, SLOP_BUCKET_ALLOCATION);
         emit SlopBucketTokensSent(slopBucketAddress, SLOP_BUCKET_ALLOCATION);
     }
 }

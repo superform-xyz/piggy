@@ -6,11 +6,11 @@ import "../src/SlopBucket.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract PiggyToken is ERC20 {
-    constructor() ERC20("Piggy Token", "PIGGY") {}
+    constructor() ERC20("Piggy Token", "PIGGY") { }
 }
 
 contract LPToken is ERC20 {
-    constructor() ERC20("LP Token", "LPT") {}
+    constructor() ERC20("LP Token", "LPT") { }
 }
 
 contract SlopBucketTest is Test {
@@ -24,7 +24,7 @@ contract SlopBucketTest is Test {
 
     uint256 public constant TOTAL_SUPPLY = 69_000_000_000 * 10 ** 18;
     uint256 public constant REWARD_SUPPLY = 6_900_000_000 * 10 ** 18;
-    uint256 public constant LP_SUPPLY = 1_000 * 10 ** 18; // Total LP tokens for users
+    uint256 public constant LP_SUPPLY = 1000 * 10 ** 18; // Total LP tokens for users
     uint256 public constant PIGGY_PER_BLOCK = 1331.4 * 10 ** 18; // ~6.9B over 4 months (5,184,000 blocks)
     uint256 public constant START_BLOCK = 100;
 
@@ -42,14 +42,14 @@ contract SlopBucketTest is Test {
 
         // Mint tokens and set up initial balances
         deal(address(piggy), owner, TOTAL_SUPPLY);
-        deal(address(lpToken), user1, 1_000 * 10 ** 18);
-        deal(address(lpToken), user2, 1_000 * 10 ** 18);
+        deal(address(lpToken), user1, 1000 * 10 ** 18);
+        deal(address(lpToken), user2, 1000 * 10 ** 18);
 
         // Transfer rewards to SlopBucket
         piggy.transfer(address(slopBucket), REWARD_SUPPLY);
     }
 
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertEq(address(slopBucket.piggy()), address(piggy));
         assertEq(slopBucket.piggyPerBlock(), PIGGY_PER_BLOCK);
         assertEq(slopBucket.startBlock(), START_BLOCK);
@@ -76,7 +76,7 @@ contract SlopBucketTest is Test {
         slopBucket.withdraw(500 * 10 ** 18);
         vm.stopPrank();
 
-        assertEq(lpToken.balanceOf(user1), 1_000 * 10 ** 18); // LP balance restored
+        assertEq(lpToken.balanceOf(user1), 1000 * 10 ** 18); // LP balance restored
         assertGt(piggy.balanceOf(user1), 0); // Rewards received
     }
 
@@ -119,7 +119,7 @@ contract SlopBucketTest is Test {
         slopBucket.emergencyWithdraw();
 
         // Verify LP tokens are returned without rewards
-        assertEq(lpToken.balanceOf(user1), 1_000 * 10 ** 18);
+        assertEq(lpToken.balanceOf(user1), 1000 * 10 ** 18);
         assertEq(piggy.balanceOf(user1), 0);
 
         vm.stopPrank();
@@ -178,7 +178,7 @@ contract SlopBucketTest is Test {
         assertEq(piggyBalanceAfter - piggyBalanceBefore, pendingRewards, "Claimed rewards should match pending rewards");
 
         // Destructure PoolInfo to get accPiggyPerShare
-        (, , , uint256 accPiggyPerShare) = slopBucket.pool();
+        (,, uint256 accPiggyPerShare) = slopBucket.pool();
 
         // Destructure UserInfo to get rewardDebt
         (, uint256 rewardDebt) = slopBucket.userInfo(user1);
@@ -192,18 +192,19 @@ contract SlopBucketTest is Test {
         assertEq(lpToken.balanceOf(user1), LP_SUPPLY - 500 * 10 ** 18, "LP balance should remain unchanged");
     }
 
-
     function test_ClaimRewards_NoPendingRewards() public {
         // User1 deposits LP tokens
         vm.startPrank(user1);
         lpToken.approve(address(slopBucket), LP_SUPPLY);
         slopBucket.deposit(500 * 10 ** 18); // Deposit 500 LP tokens
+        // Move blocks to accumulate rewards
+        vm.roll(START_BLOCK + 10);
         slopBucket.claimRewards(); // Immediately claim rewards
         vm.stopPrank();
 
         // Verify no rewards are available to claim again
         vm.startPrank(user1);
-        vm.expectRevert("No rewards to claim");
+        vm.expectRevert(SlopBucket.NO_REWARDS_TO_CLAIM.selector);
         slopBucket.claimRewards();
         vm.stopPrank();
     }

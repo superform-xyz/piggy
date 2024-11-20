@@ -32,7 +32,7 @@ contract Piggy is ERC20, Ownable {
     error CANNOT_BURN_UNTIL_MERKLE_ROOT_IS_LOCKED();
     error CANNOT_BURN_UNLESS_SLOPE_BUCKET_HAS_RECEIVED_TOKENS();
 
-    constructor() Ownable(msg.sender) ERC20("PIGGY", "PIGGY") {
+    constructor(address initialOwner) Ownable(initialOwner) ERC20("PIGGY", "PIGGY") {
         _mint(address(this), TOTAL_SUPPLY);
     }
 

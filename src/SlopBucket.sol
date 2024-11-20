@@ -41,7 +41,15 @@ contract SlopBucket is Ownable {
     error REWARDS_STOP_DELAY_NOT_REACHED();
     error WITHDRAW_AMOUNT_EXCEEDS_BALANCE();
 
-    constructor(IERC20 _piggy, IERC20 _lpToken, uint256 _piggyPerBlock, uint256 _startBlock) Ownable(msg.sender) {
+    constructor(
+        address initialOwner,
+        IERC20 _piggy,
+        IERC20 _lpToken,
+        uint256 _piggyPerBlock,
+        uint256 _startBlock
+    )
+        Ownable(initialOwner)
+    {
         piggy = _piggy;
         piggyPerBlock = _piggyPerBlock;
         startBlock = _startBlock;

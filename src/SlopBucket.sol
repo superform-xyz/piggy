@@ -22,13 +22,23 @@ contract SlopBucket is Ownable {
 
     PoolInfo public pool;
     mapping(address => UserInfo) public userInfo;
+    bool public rewardsStopped;
+    bool public rewardsStopRequested;
+    uint256 public rewardsStopRequestedAt;
 
+    uint256 public constant STOP_REWARDS_DELAY = 7 * 86_400; // 7 days
+
+    event RewardsStopped();
+    event RewardsStopRequested();
     event Deposit(address indexed user, uint256 amount);
     event Withdraw(address indexed user, uint256 amount);
     event ClaimRewards(address indexed user, uint256 amount);
     event EmergencyWithdraw(address indexed user, uint256 amount);
 
     error NO_REWARDS_TO_CLAIM();
+    error REWARDS_STOP_REQUESTED();
+    error REWARDS_STOP_NOT_REQUESTED();
+    error REWARDS_STOP_DELAY_NOT_REACHED();
     error WITHDRAW_AMOUNT_EXCEEDS_BALANCE();
 
     constructor(IERC20 _piggy, IERC20 _lpToken, uint256 _piggyPerBlock, uint256 _startBlock) Ownable(msg.sender) {
@@ -38,6 +48,25 @@ contract SlopBucket is Ownable {
 
         // Initialize the pool
         pool = PoolInfo({ lpToken: _lpToken, lastRewardBlock: _startBlock, accPiggyPerShare: 0 });
+    }
+
+    // request stop rewards
+    function requestStopRewards() external onlyOwner {
+        require(!rewardsStopRequested, REWARDS_STOP_REQUESTED());
+
+        rewardsStopRequested = true;
+        rewardsStopRequestedAt = block.timestamp;
+
+        emit RewardsStopRequested();
+    }
+
+    // stop rewards
+    function stopRewards() external onlyOwner {
+        require(rewardsStopRequested, REWARDS_STOP_NOT_REQUESTED());
+        require(block.timestamp - rewardsStopRequestedAt >= STOP_REWARDS_DELAY, REWARDS_STOP_DELAY_NOT_REACHED());
+
+        rewardsStopped = true;
+        emit RewardsStopped();
     }
 
     // Update pool rewards
@@ -127,6 +156,16 @@ contract SlopBucket is Ownable {
         require(pending > 0, NO_REWARDS_TO_CLAIM());
 
         user.rewardDebt = (user.amount * pool.accPiggyPerShare) / 1e12;
+
+        // if rewards are stopped it means Slop was almost depleted
+        //     only transfer the available balance
+        if (rewardsStopped) {
+            uint256 availablePiggy = piggy.balanceOf(address(this));
+            if (pending > availablePiggy) {
+                pending = availablePiggy;
+            }
+        }
+
         piggy.transfer(msg.sender, pending);
         emit ClaimRewards(msg.sender, pending);
     }

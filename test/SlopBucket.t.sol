@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import "forge-std/Test.sol";
 import "../src/SlopBucket.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "forge-std/console.sol";
 
 contract PiggyToken is ERC20 {
     constructor() ERC20("Piggy Token", "PIGGY") { }
@@ -207,5 +208,55 @@ contract SlopBucketTest is Test {
         vm.expectRevert(SlopBucket.NO_REWARDS_TO_CLAIM.selector);
         slopBucket.claimRewards();
         vm.stopPrank();
+    }
+
+    function test_StopRewards() public {
+        vm.startPrank(user1);
+        vm.expectRevert();
+        slopBucket.requestStopRewards();
+
+        vm.expectRevert();
+        slopBucket.stopRewards();
+        vm.stopPrank();
+
+        assertFalse(slopBucket.rewardsStopped());
+        vm.expectRevert(SlopBucket.REWARDS_STOP_NOT_REQUESTED.selector);
+        slopBucket.stopRewards();
+
+        slopBucket.requestStopRewards();
+        vm.expectRevert(SlopBucket.REWARDS_STOP_DELAY_NOT_REACHED.selector);
+        slopBucket.stopRewards();
+        assertFalse(slopBucket.rewardsStopped());
+
+        vm.warp(vm.getBlockTimestamp() + slopBucket.STOP_REWARDS_DELAY() + 100);
+        slopBucket.stopRewards();
+        assertTrue(slopBucket.rewardsStopped());
+    }
+
+    function test_ClaimAfterRewardsStop() public {
+        // User1 deposits LP tokens
+        vm.startPrank(user1);
+        lpToken.approve(address(slopBucket), LP_SUPPLY);
+        slopBucket.deposit(500 * 10 ** 18); // Deposit 500 LP tokens
+        vm.stopPrank();
+
+        // Move blocks to accumulate rewards
+        vm.roll(START_BLOCK + 9_999_999_999);
+
+        slopBucket.requestStopRewards();
+        vm.warp(vm.getBlockTimestamp() + slopBucket.STOP_REWARDS_DELAY() + 100);
+        slopBucket.stopRewards();
+
+        // User1 claims rewards
+        vm.startPrank(user1);
+        uint256 pendingRewards = slopBucket.pendingRewards(user1);
+        assertGt(pendingRewards, 0, "Rewards should be greater than 0");
+
+        uint256 piggyBalanceBefore = piggy.balanceOf(user1);
+        pendingRewards = slopBucket.pendingRewards(user1);
+        slopBucket.claimRewards();
+        uint256 piggyBalanceAfter = piggy.balanceOf(user1);
+
+        assertGt(pendingRewards, piggyBalanceAfter - piggyBalanceBefore);
     }
 }

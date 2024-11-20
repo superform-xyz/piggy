@@ -26,7 +26,7 @@ contract PiggyTest is Test {
         slopBucket = address(0x3);
 
         // Deploy contract
-        piggy = new Piggy();
+        piggy = new Piggy(owner);
 
         // Create Merkle tree data
         bytes32 leaf1 = keccak256(abi.encodePacked(user1, CLAIM_AMOUNT));
@@ -129,7 +129,7 @@ contract PiggyTest is Test {
     }
 
     function testFail_ClaimTokens_MerkleRootNotSet() public {
-        Piggy newPiggy = new Piggy();
+        Piggy newPiggy = new Piggy(owner);
         vm.prank(user1);
         newPiggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
     }

@@ -39,7 +39,8 @@ contract SlopBucketTest is Test {
         lpToken = new LPToken();
 
         // Deploy SlopBucket contract
-        slopBucket = new SlopBucket(IERC20(address(piggy)), IERC20(address(lpToken)), PIGGY_PER_BLOCK, START_BLOCK);
+        slopBucket =
+            new SlopBucket(owner, IERC20(address(piggy)), IERC20(address(lpToken)), PIGGY_PER_BLOCK, START_BLOCK);
 
         // Mint tokens and set up initial balances
         deal(address(piggy), owner, TOTAL_SUPPLY);

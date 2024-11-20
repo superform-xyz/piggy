@@ -182,4 +182,36 @@ contract PiggyTest is Test {
         assertEq(piggy.balanceOf(user2), CLAIM_AMOUNT);
         assertEq(piggy.balanceOf(slopBucket), SLOP_BUCKET_ALLOCATION);
     }
+
+    function test_CannotClaim() public {
+        // 1. Initial state checks
+        uint256 totalSupply = piggy.TOTAL_SUPPLY();
+        assertEq(piggy.balanceOf(address(piggy)), totalSupply);
+
+        vm.startPrank(user2);
+        vm.expectRevert(Piggy.INVALID_USER_ADDRESS.selector);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        vm.stopPrank();
+    }
+
+    function test_ClaimFromDelegatee() public {
+        vm.startPrank(user1);
+        piggy.delegateClaimTokens(user2);
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        vm.stopPrank();
+
+        assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
+
+        vm.startPrank(user1);
+        piggy.removeDelegatee();
+        vm.stopPrank();
+
+        vm.startPrank(user2);
+        vm.expectRevert(Piggy.INVALID_USER_ADDRESS.selector);
+        piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
+        vm.stopPrank();
+    }
 }

@@ -13,12 +13,14 @@ contract Piggy is ERC20, Ownable {
     bool public hasSentToSlopBucket = false;
     uint256 public constant SLOP_BUCKET_ALLOCATION = 6_900_000_000 * 10 ** 18;
     mapping(address => bool) public hasClaimed;
+    mapping(address => address) public delegatee;
 
-    event MerkleRootSet(bytes32 merkleRoot);
     event MerkleRootLocked();
-    event TokensClaimed(address indexed user, uint256 amount);
     event TokensBurned(uint256 amount);
+    event MerkleRootSet(bytes32 merkleRoot);
+    event TokensClaimed(address indexed user, uint256 amount);
     event SlopBucketTokensSent(address indexed slopBucket, uint256 amount);
+    event TokensDelegated(address indexed delegator, address indexed delegatee);
 
     error MERKLE_ROOT_LOCKED();
     error MERKLE_ROOT_NOT_SET();
@@ -55,13 +57,31 @@ contract Piggy is ERC20, Ownable {
     }
 
     /**
+     * @dev Allows a user to delegate their claim tokens to another user.
+     * @param user The address of the user to delegate tokens to.
+     */
+    function delegateClaimTokens(address user) external {
+        require(user != address(0), INVALID_USER_ADDRESS());
+        delegatee[msg.sender] = user;
+        emit TokensDelegated(msg.sender, user);
+    }
+
+    /**
+     * @dev Allows a user to remove their delegatee.
+     */
+    function removeDelegatee() external {
+        delete delegatee[msg.sender];
+        emit TokensDelegated(msg.sender, address(0));
+    }
+
+    /**
      * @dev Claims tokens for a given user address if the Merkle proof is valid.
      * @param user The address of the user to claim tokens for.
      * @param amount The amount of tokens the user is eligible to claim.
      * @param merkleProof The Merkle proof that verifies the user and amount are in the Merkle tree.
      */
     function claimTokens(address user, uint256 amount, bytes32[] calldata merkleProof) external {
-        require(user != address(0), INVALID_USER_ADDRESS());
+        require(user == msg.sender || delegatee[user] == msg.sender, INVALID_USER_ADDRESS());
         require(merkleRoot != bytes32(0), MERKLE_ROOT_NOT_SET());
         require(!hasClaimed[user], TOKENS_ALREADY_CLAIMED());
         bytes32 leaf = keccak256(abi.encodePacked(user, amount));

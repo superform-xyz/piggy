@@ -20,4 +20,4 @@ tab_width = 4
 wrap_comments = true
 
 [etherscan]
-base_sepolia = { key = "${BASE_SEPOLIA_ETHERSCAN_API_KEY}" }
+unknown_chain = { key = "TENDERLY_ACCESS_KEY", chain = 84532, url = "https://api.tenderly.co/api/v1/account/superform/project/v1/etherscan/verify/network/84532/public" }

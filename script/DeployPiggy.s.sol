@@ -10,7 +10,7 @@ contract DeployPiggy is CREATE3Script {
     // Add storage variables
     address public constant OWNER = 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879;
 
-    constructor() CREATE3Script("v2") { }
+    constructor() CREATE3Script("v4") { }
 
     function deploy() public {
         vm.startBroadcast();

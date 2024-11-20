@@ -13,10 +13,12 @@ forge script script/DeployPiggy.s.sol:DeployPiggy --sig "deploy()" \
     --rpc-url $BASE_SEPOLIA_RPC_URL \
     --account testDeployer \
     --sender 0x76e9b0063546d97a9c2fdbc9682c5fa347b253ba \
-    --etherscan-api-key $TENDERLY_ACCESS_KEY \
-    --verify \
-    --verifier-url $BASE_SEPOLIA_VERIFIER_URL \
     --broadcast \
-    --slow
+    --slow \
+    --legacy
+    # --etherscan-api-key $TENDERLY_ACCESS_KEY \
+    # --verify \
+    # --verifier-url $BASE_SEPOLIA_VERIFIER_URL \
+
 
 wait

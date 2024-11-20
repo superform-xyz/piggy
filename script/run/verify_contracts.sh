@@ -14,15 +14,16 @@ api_keys=(
 
 ## CONTRACTS VERIFICATION
 piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879)"
-slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879 0x6CAB55b6b7039795e7BC0A0359f0Ab3a85802B51 0x6CAB55b6b7039795e7BC0A0359f0Ab3a85802B51 1000000000000000000 18167605)"
+slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879 0xa7C21960F0776e50a38D1589a952009BAf4583EF 0xa7C21960F0776e50a38D1589a952009BAf4583EF 1000000000000000000 18182598)"
+
 file_names=(
     "src/Piggy.sol"
     "src/SlopBucket.sol"
     # Add more file names here if needed
 )
 contract_addresses=(
-    0x6CAB55b6b7039795e7BC0A0359f0Ab3a85802B51
-    0x932F2D86E467B01dbB4511D820a8F48fE9d8a48D
+    0xa7C21960F0776e50a38D1589a952009BAf4583EF
+    0xAF2D1A4c4773f0767E339e58C0e8Ad9efA263ec9
     # Add more addresses here if needed
 )
 
@@ -49,6 +50,7 @@ for i in "${!networks[@]}"; do
         contract_address="${contract_addresses[$j]}"
         constructor_arg="${constructor_args[$j]}"
         # verify the contract
+        echo "Verifying $contract_name at $contract_address on $network"
 
         forge verify-contract $contract_address \
             --chain-id $network \

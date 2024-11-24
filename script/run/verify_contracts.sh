@@ -13,8 +13,8 @@ api_keys=(
 )
 
 ## CONTRACTS VERIFICATION
-piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879)"
-slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879 0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609 0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609 1000000000000000000 18183263)"
+piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f)"
+slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609 1000000000000000000 18183263)"
 
 file_names=(
     "src/Piggy.sol"
@@ -22,7 +22,7 @@ file_names=(
     # Add more file names here if needed
 )
 contract_addresses=(
-    0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609
+    0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d
     # 0x5f9069f02fDD400516c83B25C2bE3f701B45879b
     # Add more addresses here if needed
 )
@@ -54,7 +54,7 @@ for i in "${!networks[@]}"; do
 
         forge verify-contract $contract_address \
             --chain-id $network \
-            --num-of-optimizations 10000 \
+            --num-of-optimizations 1000000 \
             --watch --compiler-version v0.8.28+commit.7893614a \
             --constructor-args "$constructor_arg" \
             "$file_name:$contract_name" \

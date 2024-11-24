@@ -7,7 +7,7 @@ import { SlopBucket } from "../src/SlopBucket.sol";
 
 contract DeployPiggy is CREATE3Script {
     // Add storage variables
-    address public constant OWNER = 0xde587D0C7773BD239fF1bE87d32C876dEd4f7879;
+    address public constant OWNER = 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f;
     address public constant PIGGY = address(0);
     address public constant PIGGY_LP = address(0);
     uint256 public constant PIGGY_PER_BLOCK = 0;

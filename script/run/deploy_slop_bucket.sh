@@ -8,8 +8,8 @@ export TENDERLY_ACCESS_KEY=$(op read op://5ylebqljbh3x6zomdxi3qd7tsa/TENDERLY_AC
 
 # Run the script
 
-echo Deploy Piggy on BaseSepolia: ...
-forge script script/DeployPiggy.s.sol:DeployPiggy --sig "deploy()" \
+echo Deploy SlopBucket on Base: ...
+forge script script/DeploySlopBucket.s.sol:DeploySlopBucket --sig "deploy()" \
     --rpc-url $BASE_RPC_URL \
     --account default \
     --sender 0x48aB8AdF869Ba9902Ad483FB1Ca2eFDAb6eabe92 \

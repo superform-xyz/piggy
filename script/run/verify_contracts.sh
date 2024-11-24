@@ -3,7 +3,7 @@
 export BASESCAN_API_KEY=$(op read op://5ylebqljbh3x6zomdxi3qd7tsa/BASESCAN_API_KEY/credential)
 
 networks=(
-    84532
+    8453
     # add more networks here if needed
 )
 
@@ -18,23 +18,23 @@ slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,addr
 
 file_names=(
     "src/Piggy.sol"
-    "src/SlopBucket.sol"
+    # "src/SlopBucket.sol"
     # Add more file names here if needed
 )
 contract_addresses=(
     0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609
-    0x5f9069f02fDD400516c83B25C2bE3f701B45879b
+    # 0x5f9069f02fDD400516c83B25C2bE3f701B45879b
     # Add more addresses here if needed
 )
 
 constructor_args=(
     $piggy_constructor_arg
-    $slop_bucket_constructor_arg
+    # $slop_bucket_constructor_arg
 )
 
 contract_names=(
     "Piggy"
-    "SlopBucket"
+    # "SlopBucket"
     # Add more contract names here if needed
 )
 

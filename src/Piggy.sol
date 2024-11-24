@@ -52,7 +52,8 @@ contract Piggy is ERC20, Ownable {
         returns (bool)
     {
         if (hasClaimed[user]) return false;
-        bytes32 leaf = keccak256(abi.encodePacked(user, amount));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(user, amount))));
+
         return MerkleProof.verify(merkleProof, merkleRoot, leaf);
     }
 
@@ -60,18 +61,20 @@ contract Piggy is ERC20, Ownable {
      * @dev Allows a user to delegate their claim tokens to another user.
      * @param user The address of the user to delegate tokens to.
      */
-    function delegateClaimTokens(address user) external {
+    function delegateClaimTokens(address user, address newDelegatee) external onlyOwner {
         require(user != address(0), INVALID_USER_ADDRESS());
-        delegatee[msg.sender] = user;
-        emit TokensDelegated(msg.sender, user);
+        require(newDelegatee != address(0), INVALID_USER_ADDRESS());
+
+        delegatee[user] = newDelegatee;
+        emit TokensDelegated(user, newDelegatee);
     }
 
     /**
      * @dev Allows a user to remove their delegatee.
      */
-    function removeDelegatee() external {
-        delete delegatee[msg.sender];
-        emit TokensDelegated(msg.sender, address(0));
+    function removeDelegatee(address user) external onlyOwner {
+        delete delegatee[user];
+        emit TokensDelegated(user, address(0));
     }
 
     /**
@@ -84,7 +87,7 @@ contract Piggy is ERC20, Ownable {
         require(user == msg.sender || delegatee[user] == msg.sender, INVALID_USER_ADDRESS());
         require(merkleRoot != bytes32(0), MERKLE_ROOT_NOT_SET());
         require(!hasClaimed[user], TOKENS_ALREADY_CLAIMED());
-        bytes32 leaf = keccak256(abi.encodePacked(user, amount));
+        bytes32 leaf = keccak256(bytes.concat(keccak256(abi.encode(user, amount))));
         require(MerkleProof.verify(merkleProof, merkleRoot, leaf), INVALID_MERKLE_PROOF());
         hasClaimed[user] = true;
         _transfer(address(this), user, amount);

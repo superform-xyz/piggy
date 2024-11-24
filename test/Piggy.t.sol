@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "forge-std/Test.sol";
 import "../src/Piggy.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 
-contract PiggyTest is Test {
+import { MerkleReader } from "test/merkle/helper/MerkleReader.sol";
+
+contract PiggyTest is MerkleReader {
     Piggy public piggy;
     address public owner;
     address public user1;
@@ -29,15 +30,9 @@ contract PiggyTest is Test {
         piggy = new Piggy(owner);
 
         // Create Merkle tree data
-        bytes32 leaf1 = keccak256(abi.encodePacked(user1, CLAIM_AMOUNT));
-        bytes32 leaf2 = keccak256(abi.encodePacked(user2, CLAIM_AMOUNT));
-        merkleRoot = keccak256(abi.encodePacked(leaf1, leaf2));
 
-        // Set merkle proofs (simplified for testing)
-        merkleProof1 = new bytes32[](1);
-        merkleProof1[0] = leaf2;
-        merkleProof2 = new bytes32[](1);
-        merkleProof2[0] = leaf1;
+        (merkleRoot, merkleProof1) = _generateMerkleTree(MerkleReader.MerkleArgs(user1));
+        (, merkleProof2) = _generateMerkleTree(MerkleReader.MerkleArgs(user2));
 
         // Set merkle root
         piggy.setMerkleRoot(merkleRoot);
@@ -137,6 +132,8 @@ contract PiggyTest is Test {
     // Test Burn Functionality
     function test_BurnUnclaimedTokens() public {
         piggy.lockMerkleRoot();
+        vm.expectRevert(Piggy.CANNOT_BURN_UNLESS_SLOPE_BUCKET_HAS_RECEIVED_TOKENS.selector);
+        piggy.burnUnclaimedTokens();
         piggy.sendToSlopBucket(slopBucket);
         piggy.burnUnclaimedTokens();
         assertEq(piggy.balanceOf(address(piggy)), 0);
@@ -195,9 +192,12 @@ contract PiggyTest is Test {
     }
 
     function test_ClaimFromDelegatee() public {
-        vm.startPrank(user1);
-        piggy.delegateClaimTokens(user2);
-        vm.stopPrank();
+        vm.expectRevert(Piggy.INVALID_USER_ADDRESS.selector);
+        piggy.delegateClaimTokens(user1, address(0));
+        vm.expectRevert(Piggy.INVALID_USER_ADDRESS.selector);
+        piggy.delegateClaimTokens(address(0), user2);
+
+        piggy.delegateClaimTokens(user1, user2);
 
         vm.startPrank(user2);
         piggy.claimTokens(user1, CLAIM_AMOUNT, merkleProof1);
@@ -205,9 +205,7 @@ contract PiggyTest is Test {
 
         assertEq(piggy.balanceOf(user1), CLAIM_AMOUNT);
 
-        vm.startPrank(user1);
-        piggy.removeDelegatee();
-        vm.stopPrank();
+        piggy.removeDelegatee(user1);
 
         vm.startPrank(user2);
         vm.expectRevert(Piggy.INVALID_USER_ADDRESS.selector);

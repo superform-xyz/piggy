@@ -5,7 +5,7 @@ import { CREATE3Script } from "./base/CREATE3Script.sol";
 import "forge-std/console2.sol";
 import { SlopBucket } from "../src/SlopBucket.sol";
 
-contract DeployPiggy is CREATE3Script {
+contract DeploySlopBucket is CREATE3Script {
     // Add storage variables
     address public constant OWNER = 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f;
     address public constant PIGGY = 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d;

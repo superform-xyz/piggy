@@ -14,27 +14,27 @@ api_keys=(
 
 ## CONTRACTS VERIFICATION
 piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f)"
-slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xaF0D65608ecAf5Fae4D9Bbb49371876bB5304609 1000000000000000000 18183263)"
+slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xF16EAF2801D9dEd435b7fc5F0ec78048C4142C3e 1000000000000000000 22876523)"
 
 file_names=(
     "src/Piggy.sol"
-    # "src/SlopBucket.sol"
+    "src/SlopBucket.sol"
     # Add more file names here if needed
 )
 contract_addresses=(
     0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d
-    # 0x5f9069f02fDD400516c83B25C2bE3f701B45879b
+    0x618EdCf3418F4eee829D0641166E4499b433de2f
     # Add more addresses here if needed
 )
 
 constructor_args=(
     $piggy_constructor_arg
-    # $slop_bucket_constructor_arg
+    $slop_bucket_constructor_arg
 )
 
 contract_names=(
     "Piggy"
-    # "SlopBucket"
+    "SlopBucket"
     # Add more contract names here if needed
 )
 

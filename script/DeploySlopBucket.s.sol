@@ -9,8 +9,8 @@ contract DeployPiggy is CREATE3Script {
     // Add storage variables
     address public constant OWNER = 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f;
     address public constant PIGGY = 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d;
-    address public constant PIGGY_LP = address(0);
-    uint256 public constant PIGGY_PER_BLOCK = 0;
+    address public constant PIGGY_LP = 0xF16EAF2801D9dEd435b7fc5F0ec78048C4142C3e;
+    uint256 public constant PIGGY_PER_BLOCK = 1000 * 10 ** 18;
 
     constructor() CREATE3Script("SQUEAAAAAL") { }
 
@@ -19,11 +19,7 @@ contract DeployPiggy is CREATE3Script {
         assert(PIGGY != address(0));
         assert(PIGGY_LP != address(0));
         assert(PIGGY_PER_BLOCK > 0);
-        // Deploy SlopBucket with parameters:
-        // - piggy token address
-        // - LP token address (using piggy for now, replace with actual LP token)
-        // - piggyPerBlock (example: 1e18 tokens per block)
-        // - startBlock (current block number)
+
         address slopBucket = create3.deploy(
             getCreate3ContractSalt("SlopBucket"),
             abi.encodePacked(
@@ -31,7 +27,7 @@ contract DeployPiggy is CREATE3Script {
                 abi.encode(
                     OWNER, // _initialOwner
                     PIGGY, // _piggy
-                    PIGGY_LP, // _lpToken (temporary)
+                    PIGGY_LP, // _lpToken
                     PIGGY_PER_BLOCK, // _piggyPerBlock
                     block.number // _startBlock
                 )

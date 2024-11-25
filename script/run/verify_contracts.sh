@@ -14,7 +14,7 @@ api_keys=(
 
 ## CONTRACTS VERIFICATION
 piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f)"
-slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xF16EAF2801D9dEd435b7fc5F0ec78048C4142C3e 1000000000000000000 22876523)"
+slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xF16EAF2801D9dEd435b7fc5F0ec78048C4142C3e 1000000000000000000000 22876523)"
 
 file_names=(
     "src/Piggy.sol"

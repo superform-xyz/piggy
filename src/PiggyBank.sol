@@ -26,7 +26,7 @@ contract PiggyBank is ERC4626 {
     uint256 public lastRewardBlock;      
     uint256 public accRewardsPerShare;  
 
-    uint256 public constant REWARDS_PER_BLOCK = 69e18;
+    uint256 public constant REWARDS_PER_BLOCK = 69e17; // 6.9 CRED per block
 
     constructor(
         IERC20 _piggyToken,
@@ -37,6 +37,7 @@ contract PiggyBank is ERC4626 {
         lastRewardBlock = block.number;
     }
 
+    // Update pool rewards
     function updatePool() public {
         if (block.number <= lastRewardBlock) {
             return;
@@ -62,6 +63,7 @@ contract PiggyBank is ERC4626 {
         lastRewardBlock = block.number;
     }
 
+    // View function to see pending CRED rewards for a user
     function pendingRewards(address _user) external view returns (uint256) {
         UserInfo storage user = userInfo[_user];
         uint256 _accRewardsPerShare = accRewardsPerShare;
@@ -88,14 +90,17 @@ contract PiggyBank is ERC4626 {
         return (pendingReward * lpRatio) / 1e18;
     }
 
+    // Convert assets to shares 1:1
     function convertToShares(uint256 assets) public view virtual override returns (uint256) {
         return assets;
     }
 
+    // Convert shares to assets 1:1
     function convertToAssets(uint256 shares) public view virtual override returns (uint256) {
         return shares;
     }
 
+    // Deposit PIGGY tokens to get PIGGY BANK shares for CRED rewards
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         updatePool();  
         
@@ -108,6 +113,7 @@ contract PiggyBank is ERC4626 {
         return shares;
     }
 
+    // Redeem PIGGY BANK shares to get back PIGGY tokens
     function redeem(
         uint256 shares,
         address receiver,

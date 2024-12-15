@@ -1,101 +1,133 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.19;
+pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 interface ISlopBucket {
     function userInfo(address user) external view returns (uint256 amount, uint256 rewardDebt);
+    function pool() external view returns (
+        IERC20 lpToken,
+        uint256 lastRewardBlock,
+        uint256 accPiggyPerShare
+    );
 }
 
-contract PiggyVault is ERC4626 {
-    IERC20 public immutable piggyToken; // PIGGY token
-    ISlopBucket public immutable slopBucket; // SlopBucket contract
+contract PiggyBank is ERC4626 {
+    IERC20 public immutable piggyToken; 
+    ISlopBucket public immutable slopBucket;
 
     struct UserInfo {
-        uint256 lastUpdated;
-        uint256 accumulatedCRED;
+        uint256 amount;          // How many PIGGY tokens the user has deposited
+        uint256 rewardDebt;      // Reward debt for rewards calculation
     }
 
     mapping(address => UserInfo) public userInfo;
+    uint256 public lastRewardBlock;      
+    uint256 public accRewardsPerShare;  
 
-    uint256 public credRate;       // CRED points earned per second per staked PIGGY
-    uint256 public multiplierRate; // Multiplier for LP stakers, scaled by 1e18
+    uint256 public constant REWARDS_PER_BLOCK = 69e18;
 
     constructor(
         IERC20 _piggyToken,
-        ISlopBucket _slopBucket,
-        uint256 _credRate,
-        uint256 _multiplierRate
-    ) ERC4626(_piggyToken) {
+        ISlopBucket _slopBucket
+    ) ERC4626(_piggyToken) ERC20("PIGGY BANK", "BANK") {
         piggyToken = _piggyToken;
         slopBucket = _slopBucket;
-        credRate = _credRate;
-        multiplierRate = _multiplierRate;
+        lastRewardBlock = block.number;
     }
 
-    /// @notice Update CRED points for a user
-    function updateCRED(address user) public {
-        UserInfo storage userDetail = userInfo[user];
-
-        if (userDetail.lastUpdated > 0) {
-            uint256 stakedBalance = balanceOf(user);
-            uint256 timeElapsed = block.timestamp - userDetail.lastUpdated;
-
-            if (stakedBalance > 0) {
-                (uint256 lpBalance, ) = slopBucket.userInfo(user);
-                uint256 multiplier = getMultiplier(stakedBalance, lpBalance);
-                userDetail.accumulatedCRED +=
-                    (stakedBalance * credRate * timeElapsed * multiplier) / 1e18;
-            }
+    function updatePool() public {
+        if (block.number <= lastRewardBlock) {
+            return;
         }
 
-        userDetail.lastUpdated = block.timestamp;
+        uint256 totalPiggy = totalAssets();
+        if (totalPiggy == 0) {
+            lastRewardBlock = block.number;
+            return;
+        }
+
+        (IERC20 lpToken,,) = slopBucket.pool();
+        uint256 totalLPStaked = lpToken.balanceOf(address(slopBucket));
+        if (totalLPStaked == 0) {
+            lastRewardBlock = block.number;
+            return;
+        }
+
+        uint256 multiplier = block.number - lastRewardBlock;
+        uint256 reward = multiplier * REWARDS_PER_BLOCK;
+        
+        accRewardsPerShare += (reward * 1e24) / totalPiggy;
+        lastRewardBlock = block.number;
     }
 
-    /// @notice Override deposit to update user rewards
+    function pendingRewards(address _user) external view returns (uint256) {
+        UserInfo storage user = userInfo[_user];
+        uint256 _accRewardsPerShare = accRewardsPerShare;
+        uint256 totalPiggy = totalAssets();
+        
+        (IERC20 lpToken,,) = slopBucket.pool();
+        uint256 totalLPStaked = lpToken.balanceOf(address(slopBucket));
+
+        if (totalPiggy == 0 || totalLPStaked == 0) {
+            return 0;
+        }
+
+        if (block.number > lastRewardBlock) {
+            uint256 multiplier = block.number - lastRewardBlock;
+            uint256 reward = multiplier * REWARDS_PER_BLOCK;
+            _accRewardsPerShare += (reward * 1e24) / totalPiggy;
+        }
+
+        (uint256 userLPStaked,) = slopBucket.userInfo(_user);
+        uint256 lpRatio = (userLPStaked * 1e18) / totalLPStaked;
+
+        uint256 baseReward = (user.amount * _accRewardsPerShare) / 1e24;
+        uint256 pendingReward = baseReward - user.rewardDebt;
+        return (pendingReward * lpRatio) / 1e18;
+    }
+
+    function convertToShares(uint256 assets) public view virtual override returns (uint256) {
+        return assets;
+    }
+
+    function convertToAssets(uint256 shares) public view virtual override returns (uint256) {
+        return shares;
+    }
+
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        updateCRED(receiver);
-        return super.deposit(assets, receiver);
+        updatePool();  
+        
+        UserInfo storage user = userInfo[receiver];
+        uint256 shares = super.deposit(assets, receiver);
+        
+        user.amount += assets;
+        user.rewardDebt = (user.amount * accRewardsPerShare) / 1e24; 
+        
+        return shares;
     }
 
-    /// @notice Override withdraw to update user rewards
-    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
-        updateCRED(owner);
-        return super.withdraw(assets, receiver, owner);
-    }
+    function redeem(
+        uint256 shares,
+        address receiver,
+        address owner
+    ) public override returns (uint256) {
+        updatePool();  
+        
+        UserInfo storage user = userInfo[owner];
 
-    /// @notice View accumulated CRED points for a user
-    function viewCRED(address user) external view returns (uint256) {
-        UserInfo storage userDetail = userInfo[user];
-        uint256 stakedBalance = balanceOf(user);
-        (uint256 lpBalance, ) = slopBucket.userInfo(user);
-
-        uint256 timeElapsed = block.timestamp - userDetail.lastUpdated;
-        uint256 multiplier = getMultiplier(stakedBalance, lpBalance);
-
-        return
-            userDetail.accumulatedCRED +
-            ((stakedBalance * credRate * timeElapsed * multiplier) / 1e18);
-    }
-
-    /// @notice Get the multiplier based on LP and PIGGY balances
-    function getMultiplier(uint256 piggyStaked, uint256 lpStaked) public view returns (uint256) {
-        if (lpStaked == 0) {
-            return 1e18; // No boost without LP balance
+        uint256 pending = (user.amount * accRewardsPerShare) / 1e24 - user.rewardDebt;
+        
+        uint256 assets = super.redeem(shares, receiver, owner);
+        
+        user.amount -= assets;
+        user.rewardDebt = (user.amount * accRewardsPerShare) / 1e24; 
+        
+        if (pending > 0) {
+            piggyToken.transfer(owner, pending);
         }
-        uint256 lpProportion = (lpStaked * 1e18) / piggyStaked;
-        uint256 boost = (lpProportion * multiplierRate) / 1e18;
-        return 1e18 + boost; // Base multiplier (1x) + LP boost
-    }
-
-    /// @notice Set the CRED earning rate (admin function)
-    function setCredRate(uint256 _credRate) external onlyOwner {
-        credRate = _credRate;
-    }
-
-    /// @notice Set the multiplier rate (admin function)
-    function setMultiplierRate(uint256 _multiplierRate) external onlyOwner {
-        multiplierRate = _multiplierRate;
+        
+        return assets;
     }
 }

@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-contract PiggyBank is ERC4626 {
+contract LockedPiggyBank is ERC4626 {
     mapping(address => uint256) public lockEndTime;
     uint256 constant LOCK_DURATION = 69 days;
 
@@ -42,11 +42,11 @@ contract PiggyBank is ERC4626 {
         if (assets == 0) revert ZeroDeposit();
         
         uint256 unlockTime = block.timestamp + LOCK_DURATION;
-        lockEndTime[tx.origin] = unlockTime;
+        lockEndTime[msg.sender] = unlockTime;
         
         uint256 shares = super.deposit(assets, receiver);
         
-        emit Locked(tx.origin, assets, unlockTime);
+        emit Locked(msg.sender, assets, unlockTime);
         return shares;
     }
 
@@ -54,11 +54,11 @@ contract PiggyBank is ERC4626 {
         if (shares == 0) revert ZeroDeposit();
         
         uint256 unlockTime = block.timestamp + LOCK_DURATION;
-        lockEndTime[tx.origin] = unlockTime;
+        lockEndTime[msg.sender] = unlockTime;
         
         uint256 assets = super.mint(shares, receiver);
         
-        emit Locked(tx.origin, assets, unlockTime);
+        emit Locked(msg.sender, assets, unlockTime);
         return assets;
     }
 
@@ -67,8 +67,8 @@ contract PiggyBank is ERC4626 {
         address receiver,
         address owner
     ) public override returns (uint256) {
-        if (isLocked(tx.origin)) {
-            revert TokensLocked(lockEndTime[tx.origin]);
+        if (isLocked(msg.sender)) {
+            revert TokensLocked(lockEndTime[msg.sender]);
         }
         return super.redeem(shares, receiver, owner);
     }
@@ -78,41 +78,41 @@ contract PiggyBank is ERC4626 {
         address receiver,
         address owner
     ) public override returns (uint256) {
-        if (isLocked(tx.origin)) {
-            revert TokensLocked(lockEndTime[tx.origin]);
+        if (isLocked(msg.sender)) {
+            revert TokensLocked(lockEndTime[msg.sender]);
         }
         return super.withdraw(assets, receiver, owner);
     }
 
     // Prevent maxDeposit/maxMint from being limited by the vault
-    function maxDeposit(address) public view override returns (uint256) {
+    function maxDeposit(address) public pure override returns (uint256) {
         return type(uint256).max;
     }
 
-    function maxMint(address) public view override returns (uint256) {
+    function maxMint(address) public pure override returns (uint256) {
         return type(uint256).max;
     }
 
     // Prevent withdrawals/redemptions when locked
     function maxWithdraw(address owner) public view override returns (uint256) {
-        return isLocked(tx.origin) ? 0 : super.maxWithdraw(owner);
+        return isLocked(msg.sender) ? 0 : super.maxWithdraw(owner);
     }
 
     function maxRedeem(address owner) public view override returns (uint256) {
-        return isLocked(tx.origin) ? 0 : super.maxRedeem(owner);
+        return isLocked(msg.sender) ? 0 : super.maxRedeem(owner);
     }
 
     // Preview functions with early reverts
     function previewWithdraw(uint256 assets) public view override returns (uint256) {
-        if (isLocked(tx.origin)) {
-            revert TokensLocked(lockEndTime[tx.origin]);
+        if (isLocked(msg.sender)) {
+            revert TokensLocked(lockEndTime[msg.sender]);
         }
         return super.previewWithdraw(assets);
     }
 
     function previewRedeem(uint256 shares) public view override returns (uint256) {
-        if (isLocked(tx.origin)) {
-            revert TokensLocked(lockEndTime[tx.origin]);
+        if (isLocked(msg.sender)) {
+            revert TokensLocked(lockEndTime[msg.sender]);
         }
         return super.previewRedeem(shares);
     }

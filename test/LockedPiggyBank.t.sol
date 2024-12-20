@@ -2,16 +2,16 @@
 pragma solidity ^0.8.19;
 
 import "forge-std/Test.sol";
-import "../src/PiggyBank.sol";
+import "../src/LockedPiggyBank.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract PiggyToken is ERC20 {
     constructor() ERC20("Piggy Token", "PIGGY") { }
 }
 
-contract PiggyBankTest is Test {
+contract LockedPiggyBankTest is Test {
     PiggyToken public piggy;
-    PiggyBank public piggyBank;
+    LockedPiggyBank public piggyBank;
 
     address public owner;
     address public user1;
@@ -26,14 +26,14 @@ contract PiggyBankTest is Test {
         user2 = address(0x2);
 
         piggy = new PiggyToken();
-        piggyBank = new PiggyBank(IERC20(address(piggy)));
+        piggyBank = new LockedPiggyBank(IERC20(address(piggy)));
 
         // Setup initial balances
         deal(address(piggy), user1, INITIAL_BALANCE);
         deal(address(piggy), user2, INITIAL_BALANCE);
     }
 
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertEq(address(piggyBank.asset()), address(piggy));
         assertEq(piggyBank.name(), "PIGGY BANK");
         assertEq(piggyBank.symbol(), "BANK");
@@ -74,7 +74,7 @@ contract PiggyBankTest is Test {
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
         
-        vm.expectRevert(abi.encodeWithSelector(PiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
+        vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.redeem(depositAmount, user1, user1);
         vm.stopPrank();
     }
@@ -86,7 +86,7 @@ contract PiggyBankTest is Test {
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
         
-        vm.expectRevert(abi.encodeWithSelector(PiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
+        vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.withdraw(depositAmount, user1, user1);
         vm.stopPrank();
     }
@@ -109,7 +109,7 @@ contract PiggyBankTest is Test {
         assertEq(piggy.balanceOf(user1), INITIAL_BALANCE);
     }
 
-    function test_MaxDepositAndMint() public {
+    function test_MaxDepositAndMint() public view {
         assertEq(piggyBank.maxDeposit(user1), type(uint256).max);
         assertEq(piggyBank.maxMint(user1), type(uint256).max);
     }
@@ -140,10 +140,10 @@ contract PiggyBankTest is Test {
         piggyBank.deposit(depositAmount, user1);
         
         // During lock period
-        vm.expectRevert(abi.encodeWithSelector(PiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
+        vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.previewWithdraw(depositAmount);
         
-        vm.expectRevert(abi.encodeWithSelector(PiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
+        vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.previewRedeem(depositAmount);
         
         // After lock period
@@ -174,10 +174,10 @@ contract PiggyBankTest is Test {
 
     function test_ZeroDeposit() public {
         vm.startPrank(user1, user1);
-        vm.expectRevert(PiggyBank.ZeroDeposit.selector);
+        vm.expectRevert(LockedPiggyBank.ZeroDeposit.selector);
         piggyBank.deposit(0, user1);
         
-        vm.expectRevert(PiggyBank.ZeroDeposit.selector);
+        vm.expectRevert(LockedPiggyBank.ZeroDeposit.selector);
         piggyBank.mint(0, user1);
         vm.stopPrank();
     }

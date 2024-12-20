@@ -6,7 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract PiggyBank is ERC4626 {
     mapping(address => uint256) public lockEndTime;
-    uint256 constant LOCK_DURATION = 90 days;
+    uint256 constant LOCK_DURATION = 69 days;
 
     event Locked(address indexed user, uint256 amount, uint256 unlockTime);
 

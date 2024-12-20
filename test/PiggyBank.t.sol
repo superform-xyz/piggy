@@ -18,7 +18,7 @@ contract PiggyBankTest is Test {
     address public user2;
 
     uint256 public constant INITIAL_BALANCE = 1000 * 1e18;
-    uint256 public constant LOCK_DURATION = 90 days;
+    uint256 public constant LOCK_DURATION = 69 days;
 
     function setUp() public {
         owner = address(this);

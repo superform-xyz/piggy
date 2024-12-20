@@ -8,7 +8,7 @@ import { LockedPiggyBank } from "../src/LockedPiggyBank.sol";
 contract DeployLockedPiggyBank is CREATE3Script {
     // Add storage variables
     address public constant PIGGY = 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d;
-    address public constant SLOP_BUCKET = 0x618EdCf3418F4eee829D0641166E4499b433de2f; 
+    address public constant SLOP_BUCKET = 0x618EdCf3418F4eee829D0641166E4499b433de2f;
 
     constructor() CREATE3Script("SQUEAAAAAL") { }
 

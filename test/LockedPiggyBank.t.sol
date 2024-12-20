@@ -41,7 +41,7 @@ contract LockedPiggyBankTest is Test {
 
     function test_Deposit() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         uint256 shares = piggyBank.deposit(depositAmount, user1);
@@ -55,7 +55,7 @@ contract LockedPiggyBankTest is Test {
 
     function test_Mint() public {
         uint256 mintAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), mintAmount);
         uint256 assets = piggyBank.mint(mintAmount, user1);
@@ -69,11 +69,11 @@ contract LockedPiggyBankTest is Test {
 
     function test_RedeemBeforeLockExpiry() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.redeem(depositAmount, user1, user1);
         vm.stopPrank();
@@ -81,11 +81,11 @@ contract LockedPiggyBankTest is Test {
 
     function test_WithdrawBeforeLockExpiry() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.withdraw(depositAmount, user1, user1);
         vm.stopPrank();
@@ -93,14 +93,14 @@ contract LockedPiggyBankTest is Test {
 
     function test_RedeemAfterLockExpiry() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         // Move forward past lock period
         vm.warp(block.timestamp + LOCK_DURATION + 1);
-        
+
         uint256 assets = piggyBank.redeem(depositAmount, user1, user1);
         vm.stopPrank();
 
@@ -116,15 +116,15 @@ contract LockedPiggyBankTest is Test {
 
     function test_MaxWithdrawAndRedeem() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         // During lock period
         assertEq(piggyBank.maxWithdraw(user1), 0);
         assertEq(piggyBank.maxRedeem(user1), 0);
-        
+
         // After lock period
         vm.warp(block.timestamp + LOCK_DURATION + 1);
         assertEq(piggyBank.maxWithdraw(user1), depositAmount);
@@ -134,18 +134,18 @@ contract LockedPiggyBankTest is Test {
 
     function test_PreviewFunctions() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         // During lock period
         vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.previewWithdraw(depositAmount);
-        
+
         vm.expectRevert(abi.encodeWithSelector(LockedPiggyBank.TokensLocked.selector, block.timestamp + LOCK_DURATION));
         piggyBank.previewRedeem(depositAmount);
-        
+
         // After lock period
         vm.warp(block.timestamp + LOCK_DURATION + 1);
         assertEq(piggyBank.previewWithdraw(depositAmount), depositAmount);
@@ -155,19 +155,19 @@ contract LockedPiggyBankTest is Test {
 
     function test_RemainingLockTime() public {
         uint256 depositAmount = 100 * 1e18;
-        
+
         vm.startPrank(user1, user1);
         piggy.approve(address(piggyBank), depositAmount);
         piggyBank.deposit(depositAmount, user1);
-        
+
         assertEq(piggyBank.remainingLockTime(user1), LOCK_DURATION);
-        
+
         // Move forward half the lock period
-        vm.warp(block.timestamp + LOCK_DURATION/2);
-        assertEq(piggyBank.remainingLockTime(user1), LOCK_DURATION/2);
-        
+        vm.warp(block.timestamp + LOCK_DURATION / 2);
+        assertEq(piggyBank.remainingLockTime(user1), LOCK_DURATION / 2);
+
         // Move forward past lock period
-        vm.warp(block.timestamp + LOCK_DURATION/2 + 1);
+        vm.warp(block.timestamp + LOCK_DURATION / 2 + 1);
         assertEq(piggyBank.remainingLockTime(user1), 0);
         vm.stopPrank();
     }
@@ -176,7 +176,7 @@ contract LockedPiggyBankTest is Test {
         vm.startPrank(user1, user1);
         vm.expectRevert(LockedPiggyBank.ZeroDeposit.selector);
         piggyBank.deposit(0, user1);
-        
+
         vm.expectRevert(LockedPiggyBank.ZeroDeposit.selector);
         piggyBank.mint(0, user1);
         vm.stopPrank();

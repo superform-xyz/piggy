@@ -13,9 +13,7 @@ contract LockedPiggyBank is ERC4626 {
     error TokensLocked(uint256 unlockTime);
     error ZeroDeposit();
 
-    constructor(
-        IERC20 _piggyToken
-    ) ERC4626(_piggyToken) ERC20("PIGGY BANK", "BANK") {}
+    constructor(IERC20 _piggyToken) ERC4626(_piggyToken) ERC20("PIGGY BANK", "BANK") { }
 
     // View function to check if a user's tokens are locked
     function isLocked(address user) public view returns (bool) {
@@ -40,44 +38,36 @@ contract LockedPiggyBank is ERC4626 {
 
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
         if (assets == 0) revert ZeroDeposit();
-        
+
         uint256 unlockTime = block.timestamp + LOCK_DURATION;
         lockEndTime[msg.sender] = unlockTime;
-        
+
         uint256 shares = super.deposit(assets, receiver);
-        
+
         emit Locked(msg.sender, assets, unlockTime);
         return shares;
     }
 
     function mint(uint256 shares, address receiver) public override returns (uint256) {
         if (shares == 0) revert ZeroDeposit();
-        
+
         uint256 unlockTime = block.timestamp + LOCK_DURATION;
         lockEndTime[msg.sender] = unlockTime;
-        
+
         uint256 assets = super.mint(shares, receiver);
-        
+
         emit Locked(msg.sender, assets, unlockTime);
         return assets;
     }
 
-    function redeem(
-        uint256 shares,
-        address receiver,
-        address owner
-    ) public override returns (uint256) {
+    function redeem(uint256 shares, address receiver, address owner) public override returns (uint256) {
         if (isLocked(msg.sender)) {
             revert TokensLocked(lockEndTime[msg.sender]);
         }
         return super.redeem(shares, receiver, owner);
     }
 
-    function withdraw(
-        uint256 assets,
-        address receiver,
-        address owner
-    ) public override returns (uint256) {
+    function withdraw(uint256 assets, address receiver, address owner) public override returns (uint256) {
         if (isLocked(msg.sender)) {
             revert TokensLocked(lockEndTime[msg.sender]);
         }

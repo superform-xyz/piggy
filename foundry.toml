@@ -19,3 +19,7 @@ number_underscore = "thousands"
 quote_style = "double"
 tab_width = 4
 wrap_comments = true
+
+[etherscan]
+#                   Paste TENDERLY_ACCESS_TOKEN            Chain ID         Verifier URL: RPC_URL/verify/etherscan
+unknown_chain = { key = "${TENDERLY_ACCESS_KEY}", chain = 8453, url = "${BASE_VERIFIER_URL}" }

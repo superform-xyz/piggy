@@ -15,26 +15,30 @@ api_keys=(
 ## CONTRACTS VERIFICATION
 piggy_constructor_arg="$(cast abi-encode "constructor(address)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f)"
 slop_bucket_constructor_arg="$(cast abi-encode "constructor(address,address,address,uint256,uint256)" 0xf82F3D7Df94FC2994315c32322DA6238cA2A2f7f 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d 0xF16EAF2801D9dEd435b7fc5F0ec78048C4142C3e 1000000000000000000000 22876523)"
-
+piggy_bank_constructor_arg="$(cast abi-encode "constructor(address)" 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d)"
 file_names=(
     "src/Piggy.sol"
     "src/SlopBucket.sol"
+    "src/PiggyBank.sol"
     # Add more file names here if needed
 )
 contract_addresses=(
     0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d
     0x618EdCf3418F4eee829D0641166E4499b433de2f
+    0x9df959f90CB00BaB9306a9Cb481B4e202A6F662B
     # Add more addresses here if needed
 )
 
 constructor_args=(
     $piggy_constructor_arg
     $slop_bucket_constructor_arg
+    $piggy_bank_constructor_arg
 )
 
 contract_names=(
     "Piggy"
     "SlopBucket"
+    "PiggyBank"
     # Add more contract names here if needed
 )
 
@@ -55,7 +59,7 @@ for i in "${!networks[@]}"; do
         forge verify-contract $contract_address \
             --chain-id $network \
             --num-of-optimizations 1000000 \
-            --watch --compiler-version v0.8.28+commit.7893614a \
+            --watch --compiler-version v0.8.28 \
             --constructor-args "$constructor_arg" \
             "$file_name:$contract_name" \
             --etherscan-api-key "$api_key"

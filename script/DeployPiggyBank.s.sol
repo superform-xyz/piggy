@@ -8,14 +8,12 @@ import { PiggyBank } from "../src/PiggyBank.sol";
 contract DeployPiggyBank is CREATE3Script {
     // Add storage variables
     address public constant PIGGY = 0xe3CF8dBcBDC9B220ddeaD0bD6342E245DAFF934d;
-    address public constant SLOP_BUCKET = 0x618EdCf3418F4eee829D0641166E4499b433de2f; 
 
     constructor() CREATE3Script("SQUEAAAAAL") { }
 
     function deploy() public {
         vm.startBroadcast();
         assert(PIGGY != address(0));
-        assert(SLOP_BUCKET != address(0));
 
         address piggyBank = create3.deploy(
             getCreate3ContractSalt("PiggyBank"),
@@ -23,7 +21,6 @@ contract DeployPiggyBank is CREATE3Script {
                 type(PiggyBank).creationCode,
                 abi.encode(
                     PIGGY, // _piggyToken
-                    SLOP_BUCKET // _slopBucket
                 )
             )
         );

@@ -4,90 +4,28 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
-interface ISlopBucket {
-    function userInfo(address user) external view returns (uint256 amount, uint256 rewardDebt);
-    function pool() external view returns (
-        IERC20 lpToken,
-        uint256 lastRewardBlock,
-        uint256 accPiggyPerShare
-    );
-}
-
 contract PiggyBank is ERC4626 {
-    IERC20 public immutable piggyToken; 
-    ISlopBucket public immutable slopBucket;
+    mapping(address => uint256) public lockEndTime;
+    uint256 constant LOCK_DURATION = 90 days;
 
-    struct UserInfo {
-        uint256 amount;          // How many PIGGY tokens the user has deposited
-        uint256 rewardDebt;      // Reward debt for rewards calculation
-    }
+    event Locked(address indexed user, uint256 amount, uint256 unlockTime);
 
-    mapping(address => UserInfo) public userInfo;
-    uint256 public lastRewardBlock;      
-    uint256 public accRewardsPerShare;  
-
-    uint256 public constant REWARDS_PER_BLOCK = 69e17; // 6.9 CRED per block
+    error TokensLocked(uint256 unlockTime);
+    error ZeroDeposit();
 
     constructor(
-        IERC20 _piggyToken,
-        ISlopBucket _slopBucket
-    ) ERC4626(_piggyToken) ERC20("PIGGY BANK", "BANK") {
-        piggyToken = _piggyToken;
-        slopBucket = _slopBucket;
-        lastRewardBlock = block.number;
+        IERC20 _piggyToken
+    ) ERC4626(_piggyToken) ERC20("PIGGY BANK", "BANK") {}
+
+    // View function to check if a user's tokens are locked
+    function isLocked(address user) public view returns (bool) {
+        return block.timestamp < lockEndTime[user];
     }
 
-    // Update pool rewards
-    function updatePool() public {
-        if (block.number <= lastRewardBlock) {
-            return;
-        }
-
-        uint256 totalPiggy = totalAssets();
-        if (totalPiggy == 0) {
-            lastRewardBlock = block.number;
-            return;
-        }
-
-        (IERC20 lpToken,,) = slopBucket.pool();
-        uint256 totalLPStaked = lpToken.balanceOf(address(slopBucket));
-        if (totalLPStaked == 0) {
-            lastRewardBlock = block.number;
-            return;
-        }
-
-        uint256 multiplier = block.number - lastRewardBlock;
-        uint256 reward = multiplier * REWARDS_PER_BLOCK;
-        
-        accRewardsPerShare += (reward * 1e24) / totalPiggy;
-        lastRewardBlock = block.number;
-    }
-
-    // View function to see pending CRED rewards for a user
-    function pendingRewards(address _user) external view returns (uint256) {
-        UserInfo storage user = userInfo[_user];
-        uint256 _accRewardsPerShare = accRewardsPerShare;
-        uint256 totalPiggy = totalAssets();
-        
-        (IERC20 lpToken,,) = slopBucket.pool();
-        uint256 totalLPStaked = lpToken.balanceOf(address(slopBucket));
-
-        if (totalPiggy == 0 || totalLPStaked == 0) {
-            return 0;
-        }
-
-        if (block.number > lastRewardBlock) {
-            uint256 multiplier = block.number - lastRewardBlock;
-            uint256 reward = multiplier * REWARDS_PER_BLOCK;
-            _accRewardsPerShare += (reward * 1e24) / totalPiggy;
-        }
-
-        (uint256 userLPStaked,) = slopBucket.userInfo(_user);
-        uint256 lpRatio = (userLPStaked * 1e18) / totalLPStaked;
-
-        uint256 baseReward = (user.amount * _accRewardsPerShare) / 1e24;
-        uint256 pendingReward = baseReward - user.rewardDebt;
-        return (pendingReward * lpRatio) / 1e18;
+    // View function to check remaining lock time
+    function remainingLockTime(address user) public view returns (uint256) {
+        if (!isLocked(user)) return 0;
+        return lockEndTime[user] - block.timestamp;
     }
 
     // Convert assets to shares 1:1
@@ -100,40 +38,82 @@ contract PiggyBank is ERC4626 {
         return shares;
     }
 
-    // Deposit PIGGY tokens to get PIGGY BANK shares for CRED rewards
     function deposit(uint256 assets, address receiver) public override returns (uint256) {
-        updatePool();  
+        if (assets == 0) revert ZeroDeposit();
         
-        UserInfo storage user = userInfo[receiver];
+        uint256 unlockTime = block.timestamp + LOCK_DURATION;
+        lockEndTime[tx.origin] = unlockTime;
+        
         uint256 shares = super.deposit(assets, receiver);
         
-        user.amount += assets;
-        user.rewardDebt = (user.amount * accRewardsPerShare) / 1e24; 
-        
+        emit Locked(tx.origin, assets, unlockTime);
         return shares;
     }
 
-    // Redeem PIGGY BANK shares to get back PIGGY tokens
+    function mint(uint256 shares, address receiver) public override returns (uint256) {
+        if (shares == 0) revert ZeroDeposit();
+        
+        uint256 unlockTime = block.timestamp + LOCK_DURATION;
+        lockEndTime[tx.origin] = unlockTime;
+        
+        uint256 assets = super.mint(shares, receiver);
+        
+        emit Locked(tx.origin, assets, unlockTime);
+        return assets;
+    }
+
     function redeem(
         uint256 shares,
         address receiver,
         address owner
     ) public override returns (uint256) {
-        updatePool();  
-        
-        UserInfo storage user = userInfo[owner];
-
-        uint256 pending = (user.amount * accRewardsPerShare) / 1e24 - user.rewardDebt;
-        
-        uint256 assets = super.redeem(shares, receiver, owner);
-        
-        user.amount -= assets;
-        user.rewardDebt = (user.amount * accRewardsPerShare) / 1e24; 
-        
-        if (pending > 0) {
-            piggyToken.transfer(owner, pending);
+        if (isLocked(tx.origin)) {
+            revert TokensLocked(lockEndTime[tx.origin]);
         }
-        
-        return assets;
+        return super.redeem(shares, receiver, owner);
+    }
+
+    function withdraw(
+        uint256 assets,
+        address receiver,
+        address owner
+    ) public override returns (uint256) {
+        if (isLocked(tx.origin)) {
+            revert TokensLocked(lockEndTime[tx.origin]);
+        }
+        return super.withdraw(assets, receiver, owner);
+    }
+
+    // Prevent maxDeposit/maxMint from being limited by the vault
+    function maxDeposit(address) public view override returns (uint256) {
+        return type(uint256).max;
+    }
+
+    function maxMint(address) public view override returns (uint256) {
+        return type(uint256).max;
+    }
+
+    // Prevent withdrawals/redemptions when locked
+    function maxWithdraw(address owner) public view override returns (uint256) {
+        return isLocked(tx.origin) ? 0 : super.maxWithdraw(owner);
+    }
+
+    function maxRedeem(address owner) public view override returns (uint256) {
+        return isLocked(tx.origin) ? 0 : super.maxRedeem(owner);
+    }
+
+    // Preview functions with early reverts
+    function previewWithdraw(uint256 assets) public view override returns (uint256) {
+        if (isLocked(tx.origin)) {
+            revert TokensLocked(lockEndTime[tx.origin]);
+        }
+        return super.previewWithdraw(assets);
+    }
+
+    function previewRedeem(uint256 shares) public view override returns (uint256) {
+        if (isLocked(tx.origin)) {
+            revert TokensLocked(lockEndTime[tx.origin]);
+        }
+        return super.previewRedeem(shares);
     }
 }

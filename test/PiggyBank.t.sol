@@ -24,7 +24,7 @@ contract PiggyBankTest is Test {
         deal(address(piggy), user, INITIAL_BALANCE);
     }
 
-    function test_Constructor() public {
+    function test_Constructor() public view {
         assertEq(address(piggyBank.asset()), address(piggy));
         assertEq(piggyBank.name(), "PIGGY BANK");
         assertEq(piggyBank.symbol(), "BANK");
@@ -59,7 +59,7 @@ contract PiggyBankTest is Test {
         assertEq(piggy.balanceOf(user), INITIAL_BALANCE);
     }
 
-    function test_ConversionRatio() public {
+    function test_ConversionRatio() public view {
         uint256 assets = 1 ether;
         uint256 shares = piggyBank.convertToShares(assets);
         assertEq(shares, assets); // 1:1 ratio

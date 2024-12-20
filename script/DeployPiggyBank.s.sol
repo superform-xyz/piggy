@@ -19,9 +19,7 @@ contract DeployPiggyBank is CREATE3Script {
             getCreate3ContractSalt("PiggyBank"),
             abi.encodePacked(
                 type(PiggyBank).creationCode,
-                abi.encode(
-                    PIGGY, // _piggyToken
-                )
+                abi.encode(PIGGY) // piggy token
             )
         );
 

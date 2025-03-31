@@ -1,4 +1,4 @@
-# PIGGY Bank 🐷
+# PIGGY 🐷
 
 A decentralized farming protocol for earning PIGGY tokens through LP staking.
 

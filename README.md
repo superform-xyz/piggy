@@ -4,7 +4,7 @@ A decentralized farming protocol for earning PIGGY tokens through LP staking.
 
 ## Overview
 
-PIGGY Bank consists of two main smart contracts:
+There are two main smart contracts:
 
 1. **Piggy.sol** - The PIGGY ERC20 token contract with Merkle-based token distribution
 2. **SlopBucket.sol** - MasterChef-style contract for staking LP tokens to earn PIGGY rewards

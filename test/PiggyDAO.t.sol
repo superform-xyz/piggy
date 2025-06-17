@@ -74,12 +74,10 @@ contract PiggyDAOTest is Test {
         piggyDAO.contributePiggy(DEPOSIT_AMOUNT);
         
         // Verify contribution was recorded correctly
-        assertEq(piggyDAO.userContributions(user1), DEPOSIT_AMOUNT);
-        assertEq(piggyDAO.totalContributions(), DEPOSIT_AMOUNT);
+        assertEq(piggyDAO.userPiggyContributions(user1), DEPOSIT_AMOUNT);
+        assertEq(piggyDAO.totalPiggyContributions(), DEPOSIT_AMOUNT);
         assertEq(piggyToken.balanceOf(address(piggyDAO)), DEPOSIT_AMOUNT);
         assertEq(piggyDAO.getDaoPiggyBalance(), DEPOSIT_AMOUNT);
-        assertEq(piggyDAO.getUserPiggyContributions(user1), DEPOSIT_AMOUNT);
-        assertEq(piggyDAO.getTotalPiggyContributions(), DEPOSIT_AMOUNT);
         
         vm.stopPrank();
     }
@@ -98,13 +96,10 @@ contract PiggyDAOTest is Test {
         vm.stopPrank();
         
         // Verify all contributions
-        assertEq(piggyDAO.userContributions(user1), DEPOSIT_AMOUNT);
-        assertEq(piggyDAO.userContributions(user2), DEPOSIT_AMOUNT * 2);
-        assertEq(piggyDAO.totalContributions(), DEPOSIT_AMOUNT * 3);
+        assertEq(piggyDAO.userPiggyContributions(user1), DEPOSIT_AMOUNT);
+        assertEq(piggyDAO.userPiggyContributions(user2), DEPOSIT_AMOUNT * 2);
+        assertEq(piggyDAO.totalPiggyContributions(), DEPOSIT_AMOUNT * 3);
         assertEq(piggyDAO.getDaoPiggyBalance(), DEPOSIT_AMOUNT * 3);
-        assertEq(piggyDAO.getUserPiggyContributions(user1), DEPOSIT_AMOUNT);
-        assertEq(piggyDAO.getUserPiggyContributions(user2), DEPOSIT_AMOUNT * 2);
-        assertEq(piggyDAO.getTotalPiggyContributions(), DEPOSIT_AMOUNT * 3);
     }
     
     function testTransferTokens() public {
@@ -260,6 +255,134 @@ contract PiggyDAOTest is Test {
         // Should revert when using piggyToken address
         vm.expectRevert(PiggyDAO.InvalidToken.selector);
         piggyDAO.contributeERC20(address(piggyToken), DEPOSIT_AMOUNT);
+        
+        vm.stopPrank();
+    }
+    
+    function testGetAllUserERC20Contributions() public {
+        // Set up multiple token contributions from the same user
+        MockERC20Token secondToken = new MockERC20Token();
+        secondToken.mint(user1, INITIAL_SUPPLY);
+        
+        vm.startPrank(user1);
+        
+        // Contribute first token
+        genericToken.approve(address(piggyDAO), DEPOSIT_AMOUNT);
+        piggyDAO.contributeERC20(address(genericToken), DEPOSIT_AMOUNT);
+        
+        // Contribute second token
+        secondToken.approve(address(piggyDAO), DEPOSIT_AMOUNT * 2);
+        piggyDAO.contributeERC20(address(secondToken), DEPOSIT_AMOUNT * 2);
+        
+        // Get all contributions
+        (address[] memory tokens, uint256[] memory amounts) = piggyDAO.getAllUserERC20Contributions(user1);
+        
+        // Verify token list and amounts
+        assertEq(tokens.length, 2);
+        assertEq(amounts.length, 2);
+        
+        // Check first token
+        assertEq(tokens[0], address(genericToken));
+        assertEq(amounts[0], DEPOSIT_AMOUNT);
+        
+        // Check second token
+        assertEq(tokens[1], address(secondToken));
+        assertEq(amounts[1], DEPOSIT_AMOUNT * 2);
+        
+        vm.stopPrank();
+    }
+    
+    function testGetUserTotalContributions() public {
+        // Set up both piggy and ERC20 contributions
+        MockERC20Token secondToken = new MockERC20Token();
+        secondToken.mint(user1, INITIAL_SUPPLY);
+        
+        vm.startPrank(user1);
+        
+        // Contribute PIGGY
+        piggyToken.approve(address(piggyDAO), DEPOSIT_AMOUNT);
+        piggyDAO.contributePiggy(DEPOSIT_AMOUNT);
+        
+        // Contribute first ERC20 token
+        genericToken.approve(address(piggyDAO), DEPOSIT_AMOUNT * 2);
+        piggyDAO.contributeERC20(address(genericToken), DEPOSIT_AMOUNT * 2);
+        
+        // Contribute second ERC20 token
+        secondToken.approve(address(piggyDAO), DEPOSIT_AMOUNT * 3);
+        piggyDAO.contributeERC20(address(secondToken), DEPOSIT_AMOUNT * 3);
+        
+        // Get all contributions
+        (uint256 piggyAmount, address[] memory tokens, uint256[] memory amounts) = 
+            piggyDAO.getUserTotalContributions(user1);
+        
+        // Verify PIGGY amount
+        assertEq(piggyAmount, DEPOSIT_AMOUNT);
+        
+        // Verify token lists and amounts
+        assertEq(tokens.length, 2);
+        assertEq(amounts.length, 2);
+        
+        // Check first token
+        assertEq(tokens[0], address(genericToken));
+        assertEq(amounts[0], DEPOSIT_AMOUNT * 2);
+        
+        // Check second token
+        assertEq(tokens[1], address(secondToken));
+        assertEq(amounts[1], DEPOSIT_AMOUNT * 3);
+        
+        vm.stopPrank();
+    }
+    
+    function testMultipleERC20TokenTracking() public {
+        // Create multiple tokens
+        MockERC20Token token1 = new MockERC20Token();
+        MockERC20Token token2 = new MockERC20Token();
+        MockERC20Token token3 = new MockERC20Token();
+        
+        token1.mint(user1, INITIAL_SUPPLY);
+        token2.mint(user1, INITIAL_SUPPLY);
+        token3.mint(user1, INITIAL_SUPPLY);
+        
+        vm.startPrank(user1);
+        
+        // Contribute all three tokens
+        token1.approve(address(piggyDAO), DEPOSIT_AMOUNT);
+        piggyDAO.contributeERC20(address(token1), DEPOSIT_AMOUNT);
+        
+        token2.approve(address(piggyDAO), DEPOSIT_AMOUNT);
+        piggyDAO.contributeERC20(address(token2), DEPOSIT_AMOUNT);
+        
+        token3.approve(address(piggyDAO), DEPOSIT_AMOUNT);
+        piggyDAO.contributeERC20(address(token3), DEPOSIT_AMOUNT);
+        
+        // Get all contributions
+        (address[] memory tokens, uint256[] memory amounts) = piggyDAO.getAllUserERC20Contributions(user1);
+        
+        // Verify three tokens were tracked
+        assertEq(tokens.length, 3);
+        assertEq(amounts.length, 3);
+        
+        // Verify each token in the list
+        bool foundToken1 = false;
+        bool foundToken2 = false;
+        bool foundToken3 = false;
+        
+        for (uint256 i = 0; i < tokens.length; i++) {
+            if (tokens[i] == address(token1)) {
+                foundToken1 = true;
+                assertEq(amounts[i], DEPOSIT_AMOUNT);
+            } else if (tokens[i] == address(token2)) {
+                foundToken2 = true;
+                assertEq(amounts[i], DEPOSIT_AMOUNT);
+            } else if (tokens[i] == address(token3)) {
+                foundToken3 = true;
+                assertEq(amounts[i], DEPOSIT_AMOUNT);
+            }
+        }
+        
+        assertTrue(foundToken1);
+        assertTrue(foundToken2);
+        assertTrue(foundToken3);
         
         vm.stopPrank();
     }

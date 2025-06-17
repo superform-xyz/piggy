@@ -11,10 +11,14 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract PiggyDAO is Ownable {
     // State Variables
     IERC20 public immutable piggyToken;
-    mapping(address => uint256) public userContributions;
-    uint256 public totalContributions;
+    mapping(address => uint256) public userPiggyContributions;
+    uint256 public totalPiggyContributions;
     mapping(address => mapping(address => uint256)) public userERC20Contributions;
     mapping(address => uint256) public totalERC20Contributions;
+    
+    // Track which ERC20 tokens each user has donated
+    mapping(address => address[]) private userDonatedTokensList;
+    mapping(address => mapping(address => bool)) private hasUserDonatedToken; // For efficient lookups
     
     // Events
     event PiggyContribution(address indexed user, uint256 amount, uint256 totalUserContributions);
@@ -51,10 +55,10 @@ contract PiggyDAO is Ownable {
         bool success = piggyToken.transferFrom(msg.sender, address(this), amount);
         require(success, "Token transfer failed");
         
-        userContributions[msg.sender] += amount;
-        totalContributions += amount;
+        userPiggyContributions[msg.sender] += amount;
+        totalPiggyContributions += amount;
         
-        emit PiggyContribution(msg.sender, amount, userContributions[msg.sender]);
+        emit PiggyContribution(msg.sender, amount, userPiggyContributions[msg.sender]);
     }
     
     /**
@@ -73,6 +77,12 @@ contract PiggyDAO is Ownable {
         
         userERC20Contributions[tokenAddress][msg.sender] += amount;
         totalERC20Contributions[tokenAddress] += amount;
+        
+        // Track this token if user hasn't donated it before
+        if (!hasUserDonatedToken[msg.sender][tokenAddress]) {
+            userDonatedTokensList[msg.sender].push(tokenAddress);
+            hasUserDonatedToken[msg.sender][tokenAddress] = true;
+        }
         
         emit ERC20Contribution(tokenAddress, msg.sender, amount, userERC20Contributions[tokenAddress][msg.sender]);
     }
@@ -145,41 +155,45 @@ contract PiggyDAO is Ownable {
     }
     
     /**
-     * @dev Returns the total PIGGY contributions made by a specific user
+     * @dev Returns all ERC20 tokens a user has donated along with their amounts
      * @param user The address of the user to check
-     * @return The total amount of PIGGY tokens contributed by the user
+     * @return tokens Array of ERC20 token addresses the user has donated
+     * @return amounts Array of corresponding amounts donated for each token
      */
-    function getUserPiggyContributions(address user) external view returns (uint256) {
-        return userContributions[user];
+    function getAllUserERC20Contributions(address user) external view returns (address[] memory tokens, uint256[] memory amounts) {
+        address[] memory donatedTokens = userDonatedTokensList[user];
+        uint256[] memory donatedAmounts = new uint256[](donatedTokens.length);
+        
+        for (uint256 i = 0; i < donatedTokens.length; i++) {
+            donatedAmounts[i] = userERC20Contributions[donatedTokens[i]][user];
+        }
+        
+        return (donatedTokens, donatedAmounts);
     }
     
     /**
-     * @dev Returns the total PIGGY contributions made by all users
-     * @return The total amount of PIGGY tokens contributed
-     */
-    function getTotalPiggyContributions() external view returns (uint256) {
-        return totalContributions;
-    }
-    
-    /**
-     * @dev Returns the total contributions of a specific ERC20 token made by a user
-     * @param tokenAddress The address of the ERC20 token
+     * @dev Returns the total user contributions (both PIGGY and all ERC20s)
      * @param user The address of the user to check
-     * @return The total amount of the specified ERC20 token contributed by the user
+     * @return piggyAmount The user's PIGGY contribution
+     * @return erc20Tokens Array of ERC20 token addresses the user has donated
+     * @return erc20Amounts Array of corresponding amounts donated for each ERC20 token
      */
-    function getUserERC20Contributions(
-        address tokenAddress, 
-        address user
-    ) external view returns (uint256) {
-        return userERC20Contributions[tokenAddress][user];
-    }
-    
-    /**
-     * @dev Returns the total contributions of a specific ERC20 token made by all users
-     * @param tokenAddress The address of the ERC20 token
-     * @return The total amount of the specified ERC20 token contributed
-     */
-    function getTotalERC20Contributions(address tokenAddress) external view returns (uint256) {
-        return totalERC20Contributions[tokenAddress];
+    function getUserTotalContributions(address user) external view returns (
+        uint256 piggyAmount,
+        address[] memory erc20Tokens,
+        uint256[] memory erc20Amounts
+    ) {
+        // Get PIGGY amount
+        piggyAmount = userPiggyContributions[user];
+        
+        // Get all ERC20 contributions
+        erc20Tokens = userDonatedTokensList[user];
+        erc20Amounts = new uint256[](erc20Tokens.length);
+        
+        for (uint256 i = 0; i < erc20Tokens.length; i++) {
+            erc20Amounts[i] = userERC20Contributions[erc20Tokens[i]][user];
+        }
+        
+        return (piggyAmount, erc20Tokens, erc20Amounts);
     }
 }

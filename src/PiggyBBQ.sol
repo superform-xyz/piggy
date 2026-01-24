@@ -15,6 +15,9 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
     IERC20 public immutable piggyToken;
     IERC20 public immutable upToken;
 
+    // Burn address for PIGGY tokens
+    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
+
     // Conversion rate: 0.0000396 UP per PIGGY
     // Calculation: upAmount = (piggyAmount * 396) / 10_000_000
     uint256 public constant CONVERSION_NUMERATOR = 396;
@@ -27,7 +30,6 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
         uint256 upAmount
     );
     event UPWithdrawn(address indexed owner, uint256 amount);
-    event PiggyWithdrawn(address indexed owner, uint256 amount);
 
     // Errors
     error ZeroPiggyBalance();
@@ -66,7 +68,7 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
      * - Contract must have sufficient UP balance
      *
      * Effects:
-     * - Transfers caller's entire PIGGY balance to this contract
+     * - Transfers caller's entire PIGGY balance to burn address (0xdead)
      * - Transfers calculated UP amount to caller
      * - Emits PiggyConverted event
      */
@@ -88,8 +90,8 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
         // Emit event before state changes (CEI pattern)
         emit PiggyConverted(msg.sender, piggyAmount, upAmount);
 
-        // Transfer PIGGY from user to contract (user must approve first)
-        bool success = piggyToken.transferFrom(msg.sender, address(this), piggyAmount);
+        // Transfer PIGGY from user to burn address (user must approve first)
+        bool success = piggyToken.transferFrom(msg.sender, BURN_ADDRESS, piggyAmount);
         require(success, "PIGGY transfer failed");
 
         // Transfer UP from contract to user
@@ -114,22 +116,6 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Allows owner to withdraw accumulated PIGGY tokens
-     * @param amount Amount of PIGGY tokens to withdraw
-     */
-    function withdrawPiggy(uint256 amount) external onlyOwner {
-        require(amount > 0, "Amount must be greater than zero");
-
-        uint256 contractBalance = piggyToken.balanceOf(address(this));
-        require(amount <= contractBalance, "Insufficient contract balance");
-
-        bool success = piggyToken.transfer(owner(), amount);
-        require(success, "PIGGY transfer failed");
-
-        emit PiggyWithdrawn(owner(), amount);
-    }
-
-    /**
      * @dev Calculate UP output for a given PIGGY input (view function for frontend)
      * @param piggyAmount Amount of PIGGY tokens
      * @return upAmount Amount of UP tokens that would be received
@@ -147,10 +133,10 @@ contract PiggyBBQ is Ownable, ReentrancyGuard {
     }
 
     /**
-     * @dev Returns the total PIGGY accumulated in contract
-     * @return balance Total PIGGY token balance in contract
+     * @dev Returns the total PIGGY burned (sent to 0xdead address)
+     * @return balance Total PIGGY token balance at burn address
      */
-    function getTotalPiggyHeld() external view returns (uint256) {
-        return piggyToken.balanceOf(address(this));
+    function getTotalPiggyBurned() external view returns (uint256) {
+        return piggyToken.balanceOf(BURN_ADDRESS);
     }
 }

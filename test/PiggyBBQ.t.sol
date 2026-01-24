@@ -22,6 +22,7 @@ contract PiggyBBQTest is Test {
     address public owner = address(1);
     address public user1 = address(2);
     address public user2 = address(3);
+    address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public constant PIGGY_AMOUNT = 100_000_000 * 10**18; // 100M PIGGY
     uint256 public constant UP_POOL = 2_500_000 * 10**18;        // 2.5M UP
@@ -58,7 +59,7 @@ contract PiggyBBQTest is Test {
         // Assertions
         assertEq(piggyToken.balanceOf(user1), 0, "User should have 0 PIGGY");
         assertEq(upToken.balanceOf(user1), expectedUP, "User should have received UP");
-        assertEq(piggyToken.balanceOf(address(piggyBBQ)), PIGGY_AMOUNT, "Contract should hold PIGGY");
+        assertEq(piggyToken.balanceOf(BURN_ADDRESS), PIGGY_AMOUNT, "PIGGY should be burned");
     }
 
     function test_ConvertPiggy_CorrectRate() public {
@@ -133,31 +134,19 @@ contract PiggyBBQTest is Test {
         piggyBBQ.withdrawUP(1000 * 10**18);
     }
 
-    function test_WithdrawPiggy_Owner() public {
-        // First, user converts PIGGY so contract has some
+    function test_GetTotalPiggyBurned() public {
+        // Initially no PIGGY burned
+        uint256 initialBurned = piggyBBQ.getTotalPiggyBurned();
+
+        // User converts PIGGY
         vm.startPrank(user1);
         piggyToken.approve(address(piggyBBQ), PIGGY_AMOUNT);
         piggyBBQ.convertPiggy();
         vm.stopPrank();
 
-        uint256 contractPiggyBalance = piggyToken.balanceOf(address(piggyBBQ));
-        assertGt(contractPiggyBalance, 0, "Contract should have PIGGY");
-
-        // Owner withdraws PIGGY
-        uint256 withdrawAmount = contractPiggyBalance / 2;
-        vm.prank(owner);
-        vm.expectEmit(true, false, false, true);
-        emit PiggyBBQ.PiggyWithdrawn(owner, withdrawAmount);
-
-        piggyBBQ.withdrawPiggy(withdrawAmount);
-
-        assertEq(piggyToken.balanceOf(owner), withdrawAmount, "Owner should receive PIGGY");
-    }
-
-    function test_RevertWhen_NonOwnerWithdrawPiggy() public {
-        vm.prank(user1);
-        vm.expectRevert();
-        piggyBBQ.withdrawPiggy(1000 * 10**18);
+        // Check burned amount increased
+        uint256 finalBurned = piggyBBQ.getTotalPiggyBurned();
+        assertEq(finalBurned - initialBurned, PIGGY_AMOUNT, "Burned amount incorrect");
     }
 
     function test_RevertWhen_SameTokenAddress() public {
@@ -193,9 +182,9 @@ contract PiggyBBQTest is Test {
         assertEq(upToken.balanceOf(user1), expectedUPPerUser, "User1 UP incorrect");
         assertEq(upToken.balanceOf(user2), expectedUPPerUser, "User2 UP incorrect");
         assertEq(
-            piggyToken.balanceOf(address(piggyBBQ)),
+            piggyToken.balanceOf(BURN_ADDRESS),
             PIGGY_AMOUNT * 2,
-            "Contract PIGGY balance incorrect"
+            "Burned PIGGY balance incorrect"
         );
     }
 

@@ -17,7 +17,7 @@ contract MockERC20 is ERC20 {
 contract PiggyBBQTest is Test {
     PiggyBBQ public piggyBBQ;
     MockERC20 public piggyToken;
-    MockERC20 public upToken;
+    MockERC20 public supToken;
 
     address public owner = address(1);
     address public user1 = address(2);
@@ -25,40 +25,40 @@ contract PiggyBBQTest is Test {
     address public constant BURN_ADDRESS = 0x000000000000000000000000000000000000dEaD;
 
     uint256 public constant PIGGY_AMOUNT = 100_000_000 * 10**18; // 100M PIGGY
-    uint256 public constant UP_POOL = 2_500_000 * 10**18;        // 2.5M UP
+    uint256 public constant SUP_POOL = 2_500_000 * 10**18;        // 2.5M sUP
 
     function setUp() public {
         // Deploy mock tokens
         piggyToken = new MockERC20("PIGGY", "PIGGY");
-        upToken = new MockERC20("UP", "UP");
+        supToken = new MockERC20("sUP", "sUP");
 
         // Deploy PiggyBBQ contract
-        piggyBBQ = new PiggyBBQ(owner, IERC20(address(piggyToken)), IERC20(address(upToken)));
+        piggyBBQ = new PiggyBBQ(owner, IERC20(address(piggyToken)), IERC20(address(supToken)));
 
         // Mint tokens to users
         piggyToken.mint(user1, PIGGY_AMOUNT);
         piggyToken.mint(user2, PIGGY_AMOUNT);
 
-        // Mint UP to contract (simulating owner deposit)
-        upToken.mint(address(piggyBBQ), UP_POOL);
+        // Mint sUP to contract (simulating owner deposit)
+        supToken.mint(address(piggyBBQ), SUP_POOL);
     }
 
     function test_ConvertPiggy_Success() public {
-        uint256 expectedUP = (PIGGY_AMOUNT * 396) / 10_000_000;
+        uint256 expectedSUP = (PIGGY_AMOUNT * 396) / 10_000_000;
 
         vm.startPrank(user1);
         piggyToken.approve(address(piggyBBQ), PIGGY_AMOUNT);
 
         // Expect event
         vm.expectEmit(true, false, false, true);
-        emit PiggyBBQ.PiggyConverted(user1, PIGGY_AMOUNT, expectedUP);
+        emit PiggyBBQ.PiggyConverted(user1, PIGGY_AMOUNT, expectedSUP);
 
         piggyBBQ.convertPiggy();
         vm.stopPrank();
 
         // Assertions
         assertEq(piggyToken.balanceOf(user1), 0, "User should have 0 PIGGY");
-        assertEq(upToken.balanceOf(user1), expectedUP, "User should have received UP");
+        assertEq(supToken.balanceOf(user1), expectedSUP, "User should have received sUP");
         assertEq(piggyToken.balanceOf(BURN_ADDRESS), PIGGY_AMOUNT, "PIGGY should be burned");
     }
 
@@ -68,10 +68,10 @@ contract PiggyBBQTest is Test {
         piggyBBQ.convertPiggy();
         vm.stopPrank();
 
-        uint256 upReceived = upToken.balanceOf(user1);
-        uint256 expectedUP = 3_960 * 10**18; // 100M * 0.0000396 = 3,960 UP
+        uint256 supReceived = supToken.balanceOf(user1);
+        uint256 expectedSUP = 3_960 * 10**18; // 100M * 0.0000396 = 3,960 sUP
 
-        assertEq(upReceived, expectedUP, "Conversion rate incorrect");
+        assertEq(supReceived, expectedSUP, "Conversion rate incorrect");
     }
 
     function test_RevertWhen_ZeroPiggyBalance() public {
@@ -84,18 +84,18 @@ contract PiggyBBQTest is Test {
         vm.stopPrank();
     }
 
-    function test_RevertWhen_InsufficientUP() public {
-        // Deploy new contract with 0 UP
-        PiggyBBQ emptyBBQ = new PiggyBBQ(owner, IERC20(address(piggyToken)), IERC20(address(upToken)));
+    function test_RevertWhen_InsufficientSUP() public {
+        // Deploy new contract with 0 sUP
+        PiggyBBQ emptyBBQ = new PiggyBBQ(owner, IERC20(address(piggyToken)), IERC20(address(supToken)));
 
         vm.startPrank(user1);
         piggyToken.approve(address(emptyBBQ), PIGGY_AMOUNT);
 
-        uint256 expectedUP = (PIGGY_AMOUNT * 396) / 10_000_000;
+        uint256 expectedSUP = (PIGGY_AMOUNT * 396) / 10_000_000;
         vm.expectRevert(
             abi.encodeWithSelector(
-                PiggyBBQ.InsufficientUPBalance.selector,
-                expectedUP,
+                PiggyBBQ.InsufficientSUPBalance.selector,
+                expectedSUP,
                 0
             )
         );
@@ -104,34 +104,34 @@ contract PiggyBBQTest is Test {
     }
 
     function test_RevertWhen_DustAmount() public {
-        // Amount too small to produce UP
-        uint256 dustAmount = 25_252; // Less than minimum for 1 wei UP
+        // Amount too small to produce sUP
+        uint256 dustAmount = 25_252; // Less than minimum for 1 wei sUP
 
         vm.startPrank(user1);
         piggyToken.transfer(user2, PIGGY_AMOUNT - dustAmount);
         piggyToken.approve(address(piggyBBQ), dustAmount);
 
-        vm.expectRevert(PiggyBBQ.ZeroUPOutput.selector);
+        vm.expectRevert(PiggyBBQ.ZeroSUPOutput.selector);
         piggyBBQ.convertPiggy();
         vm.stopPrank();
     }
 
-    function test_WithdrawUP_Owner() public {
+    function test_WithdrawSUP_Owner() public {
         uint256 withdrawAmount = 1_000_000 * 10**18;
 
         vm.prank(owner);
         vm.expectEmit(true, false, false, true);
-        emit PiggyBBQ.UPWithdrawn(owner, withdrawAmount);
+        emit PiggyBBQ.SUPWithdrawn(owner, withdrawAmount);
 
-        piggyBBQ.withdrawUP(withdrawAmount);
+        piggyBBQ.withdrawSUP(withdrawAmount);
 
-        assertEq(upToken.balanceOf(owner), withdrawAmount, "Owner should receive UP");
+        assertEq(supToken.balanceOf(owner), withdrawAmount, "Owner should receive sUP");
     }
 
     function test_RevertWhen_NonOwnerWithdraw() public {
         vm.prank(user1);
         vm.expectRevert();
-        piggyBBQ.withdrawUP(1000 * 10**18);
+        piggyBBQ.withdrawSUP(1000 * 10**18);
     }
 
     function test_GetTotalPiggyBurned() public {
@@ -154,15 +154,15 @@ contract PiggyBBQTest is Test {
         new PiggyBBQ(owner, IERC20(address(piggyToken)), IERC20(address(piggyToken)));
     }
 
-    function test_CalculateUPOutput() public view {
-        uint256 output = piggyBBQ.calculateUPOutput(PIGGY_AMOUNT);
+    function test_CalculateSUPOutput() public view {
+        uint256 output = piggyBBQ.calculateSUPOutput(PIGGY_AMOUNT);
         uint256 expected = (PIGGY_AMOUNT * 396) / 10_000_000;
         assertEq(output, expected, "Calculation function incorrect");
     }
 
-    function test_GetAvailableUP() public view {
-        uint256 available = piggyBBQ.getAvailableUP();
-        assertEq(available, UP_POOL, "Available UP incorrect");
+    function test_GetAvailableSUP() public view {
+        uint256 available = piggyBBQ.getAvailableSUP();
+        assertEq(available, SUP_POOL, "Available sUP incorrect");
     }
 
     function test_MultipleConversions() public {
@@ -178,9 +178,9 @@ contract PiggyBBQTest is Test {
         piggyBBQ.convertPiggy();
         vm.stopPrank();
 
-        uint256 expectedUPPerUser = (PIGGY_AMOUNT * 396) / 10_000_000;
-        assertEq(upToken.balanceOf(user1), expectedUPPerUser, "User1 UP incorrect");
-        assertEq(upToken.balanceOf(user2), expectedUPPerUser, "User2 UP incorrect");
+        uint256 expectedSUPPerUser = (PIGGY_AMOUNT * 396) / 10_000_000;
+        assertEq(supToken.balanceOf(user1), expectedSUPPerUser, "User1 sUP incorrect");
+        assertEq(supToken.balanceOf(user2), expectedSUPPerUser, "User2 sUP incorrect");
         assertEq(
             piggyToken.balanceOf(BURN_ADDRESS),
             PIGGY_AMOUNT * 2,
@@ -193,10 +193,10 @@ contract PiggyBBQTest is Test {
         uint256 maxPiggy = 63_123_637_092 * 10**18;
         piggyToken.mint(user1, maxPiggy);
 
-        // Ensure contract has enough UP
+        // Ensure contract has enough sUP
         uint256 totalPiggy = piggyToken.balanceOf(user1);
-        uint256 requiredUP = (totalPiggy * 396) / 10_000_000;
-        upToken.mint(address(piggyBBQ), requiredUP);
+        uint256 requiredSUP = (totalPiggy * 396) / 10_000_000;
+        supToken.mint(address(piggyBBQ), requiredSUP);
 
         vm.startPrank(user1);
         piggyToken.approve(address(piggyBBQ), totalPiggy);
@@ -204,6 +204,6 @@ contract PiggyBBQTest is Test {
         vm.stopPrank();
 
         assertEq(piggyToken.balanceOf(user1), 0, "User should have 0 PIGGY");
-        assertGt(upToken.balanceOf(user1), 0, "User should have received UP");
+        assertGt(supToken.balanceOf(user1), 0, "User should have received sUP");
     }
 }

@@ -6,6 +6,7 @@ verbosity = 1
 remappings = ["@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"]
 cbor_metadata = true
 fs_permissions = [{ access = "read-write", path = "./" }]
+ffi = true
 
 [rpc_endpoints]
 base = "${BASE_RPC_URL}"
